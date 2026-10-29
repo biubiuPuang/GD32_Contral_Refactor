@@ -1,0 +1,16 @@
+[
+  {
+    "board": "211",
+    "errors": 0,
+    "warnings": 0,
+    "image_end": "0x80042e8",
+    "hex_sha256": "2007e424761de6bfdb3309062085d486f92da4368805c5b9154a85958ff1bdb7"
+  },
+  {
+    "board": "221",
+    "errors": 0,
+    "warnings": 0,
+    "image_end": "0x8004270",
+    "hex_sha256": "7eeca6139de1a66587db4ed269e04aaf99d329f6c42850e18fd7210075b59cc2"
+  }
+]

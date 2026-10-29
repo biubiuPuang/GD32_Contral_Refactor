@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from check_frequencies import check as check_frequencies
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -44,7 +45,7 @@ def simulate(side):
                "-I" + str(HERE / "mock"), "-I" + str(app),
                "-I" + str(ROOT / f"{side}_Project/wu-xian_interface"),
                "-I" + str(ROOT / f"{side}_Project/User"),
-               str(HERE / "simulate.c"), "-o", str(executable)]
+               str(HERE / "simulate_multi.c"), "-o", str(executable)]
     subprocess.run(command, check=True, timeout=60)
     subprocess.run([str(executable)], check=True, timeout=10)
 
@@ -82,9 +83,13 @@ def build_demo(side):
     print(side, "Keil exit:", result.returncode, "\n" + "\n".join(summary), flush=True)
     assert result.returncode == 0 and re.search(r"0 Error\(s\), 0 Warning\(s\)", text), str(log)
     assert (output / f"Objects/wireless_{side}_demo.hex").is_file()
+    from intelhex import IntelHex
+    firmware = IntelHex(str(output / f"Objects/wireless_{side}_demo.hex"))
+    assert max(firmware.addresses()) < 0x0800F800, "Firmware overlaps configuration journal"
 
 
 if __name__ == "__main__":
+    check_frequencies()
     check_inputs()
     for target in ("211", "221"):
         simulate(target)

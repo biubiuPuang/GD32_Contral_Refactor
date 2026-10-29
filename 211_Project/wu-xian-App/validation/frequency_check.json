@@ -1,0 +1,40 @@
+{
+  "crystal_mhz": 26.0,
+  "tx_ppm": 40,
+  "rx_ppm": 40,
+  "initial_afc": 21,
+  "source_sha256": "d0aac0145987725e3b78c3ba504bc554796039c084f43fe48b764bd6f0bf10da",
+  "workbook_stream_sha256": "f4d8c76eded2c3efad73e83329874d10b83d2eeddd9dda0711bf4fd2f1f25042",
+  "channels": [
+    {
+      "channel": 0,
+      "mhz": 433.92,
+      "afc_ovf_th": 21
+    },
+    {
+      "channel": 1,
+      "mhz": 434.07,
+      "afc_ovf_th": 21
+    },
+    {
+      "channel": 2,
+      "mhz": 434.22,
+      "afc_ovf_th": 21
+    },
+    {
+      "channel": 3,
+      "mhz": 434.37,
+      "afc_ovf_th": 21
+    },
+    {
+      "channel": 4,
+      "mhz": 434.52,
+      "afc_ovf_th": 21
+    },
+    {
+      "channel": 5,
+      "mhz": 434.67,
+      "afc_ovf_th": 21
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "211_Project\\User\\main.c": "52055fc6d6ddceb946db79dd48928385d86353589da37d2f71ee6c24d9b3c1fa",
+  "211_Project\\User\\main.c": "3c3d2c4714f1fe78b88158633022d8a456aab94547d39ff174b325ca7fef8128",
   "资料\\CMT2119B及CMT2219B_FRPDK参数在这\\211_config.exp": "cdcf7e861a381b10619f4a8f23636a8289acae1449c8dc0b96872b569389ba22",
   "211_Project\\wu-xian_interface\\cmt2119b.c": "eabf02f7251d537dfe0624ca54fbf2dc931773662bf202cc597e34677f9dce2f",
   "211_Project\\wu-xian_interface\\cmt2119b.h": "ccb5fa2370df4e89fa1359a78b7083449d69f4e908cbfa4af25b5867d95259ca",
@@ -14,7 +14,7 @@
   "211_Project\\wu-xian_interface\\cmt_spi3.h": "250e593f6ce4b4d8f544a21501f966361915f3391329ad96a80554f22ac6fa34",
   "211_Project\\wu-xian_interface\\README.md": "8d08f493133bde342e709f414ca79b0a3e955675e7e9b2e4ad90e36506fab767",
   "211_Project\\wu-xian_interface\\typedefs.h": "d0fb503cc6585e548765e3c1a6b5f4228af39f4b7b5b97fe4ac2ade4dc5e68c3",
-  "221_Project\\User\\main.c": "52055fc6d6ddceb946db79dd48928385d86353589da37d2f71ee6c24d9b3c1fa",
+  "221_Project\\User\\main.c": "3c3d2c4714f1fe78b88158633022d8a456aab94547d39ff174b325ca7fef8128",
   "资料\\CMT2119B及CMT2219B_FRPDK参数在这\\221_config.exp": "8bab7b43f517800b09974e3fd6de7f9189308328bdae573bfb1fb31cd09d224b",
   "221_Project\\wu-xian_interface\\cmt2219b.c": "870a71cc58af95187341b32050d7158f4071481989045faa6db4444337ebadb8",
   "221_Project\\wu-xian_interface\\cmt2219b.h": "da3de3b325303a51c34f46758849f1ac399e16faf5c53a07f8de272c16a90398",
