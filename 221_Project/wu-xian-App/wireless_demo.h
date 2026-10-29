@@ -1,16 +1,27 @@
 #ifndef WIRELESS_DEMO_H
 #define WIRELESS_DEMO_H
 
-/* Project application functions. Call Init once, then Process in a tight loop.
- * Init configures the existing SysTick delay BSP, USART1 and TIMER2;
- * the TX board also configures active-low PA9/PA10 inputs with pull-ups.
- * Application owns USART1_IRQHandler for buffered RX and nonblocking log TX.
- * TIMER2 is reserved; no timer/SysTick IRQ handler is required.
- * Persistent settings use 0x0800F800..0x0800FFFF (last two 1KB pages).
- * First boot/default: unpaired. Provision BOTH boards with SET,<ID>,<CH>.
- * Call only from main context. Do not add a 300 ms delay around Process.
+#include <stdint.h>
+
+/* RX service only. Use ReceiverApp_Init/Process in main for physical control.
+ * Owns USART1_IRQHandler, TIMER2, radio SPI and the last two Flash pages.
+ * Existing GPIO/USART/SysTick BSPs are reused. All APIs run in main context.
+ * Raw valid packets do NOT bypass the shared execution/limit feedback checks.
  */
+#define WIRELESS_CONTROL_TAG       0xA2U
+#define WIRELESS_CMD_STOP          0x00U
+#define WIRELESS_CMD_UP            0x01U
+#define WIRELESS_CMD_DOWN          0x02U
+#define WIRELESS_CMD_FAST          0x04U
+#define WIRELESS_CMD_UP_FAST       (WIRELESS_CMD_UP | WIRELESS_CMD_FAST)
+#define WIRELESS_CMD_DOWN_FAST     (WIRELESS_CMD_DOWN | WIRELESS_CMD_FAST)
 void WirelessDemo_Init(void);
 void WirelessDemo_Process(void);
+uint8_t WirelessDemo_GetCommand(void); /* STOP if fault, unpaired or >=85ms old. */
+uint8_t WirelessDemo_Log(const char *line); /* Complete nonblocking UART line. */
+void WirelessDemo_SetRetryAllowed(uint8_t allowed);
+/* Pause physical execution around explicit SET/DEFAULT maintenance, including
+ * Flash operations. NULL is permitted for service-only host tests. */
+void WirelessDemo_SetMaintenanceHook(void (*hook)(uint8_t active));
 
 #endif

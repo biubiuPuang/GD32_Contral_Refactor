@@ -49,9 +49,20 @@ const char *WiredLogic_ModeName(const WiredLogic *logic);
 
 /* Board entry points: call Init once, Process continuously without delays.
  * Owns PA8/9/10, PB3/4/5/6/11/12/13, TIMER13 and USART1 output.
- * The existing radio Demo must not be initialized alongside this app. */
+ * Use ReceiverApp_Init/Process for the integrated wireless application. */
 void WiredControl_Init(void);
 void WiredControl_Process(void);
 void WiredControl_SetSoftwareStop(uint8_t active);
+
+/* Shared execution adapter. This does NOT implement simultaneous wired/RF
+ * priority arbitration. Commands: 0=STOP, 1=UP, 2=DOWN, 5/6=FAST UP/DOWN.
+ * A source/direction/speed change first removes KM permission and requests,
+ * completes existing relay release, then waits for direction-path settling.
+ */
+void WiredControl_SetRemoteCommand(uint8_t command);
+uint8_t WiredControl_RadioRetryAllowed(void);
+/* Main-context logging sink: returns 1 when a complete line was queued.
+ * NULL selects the original wired-only polled UART transmitter. */
+void WiredControl_SetLogSink(uint8_t (*sink)(const char *line));
 
 #endif

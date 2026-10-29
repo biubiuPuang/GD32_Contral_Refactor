@@ -1,18 +1,12 @@
 # 221 有线控制测试版本
 
 打开原工程 `221_Project/Project/GD32E230C8T6.uvprojx`，编译、烧录接收控制板。
-`User/main.c` 已改为调用下面两个**项目自定义函数**，无需再手动替换：
+当前 `User/main.c` 已切换为 `ReceiverApp_Init/ReceiverApp_Process`，由它统一调用有线执行和无线接收。
+原有有线执行规则保留，原状态机 `wired_control.c` 本次无线接入未修改。
+无线请求与共用 GPIO 适配新增在 `wired_port.c`，无线协议/配对/串口服务位于 `wu-xian-App`。
+完整烧录、配对和日志说明见 [当前联动版本说明](../wu-xian-App/README.md)。
 
-```c
-WiredControl_Init();
-while (1) {
-    WiredControl_Process();
-}
-```
-
-本次只实现有线执行。PB12/PB13 始终为低，禁用无线方向请求；无线 Demo 源文件保留，
-但 `wireless_demo.c` 在此 Keil 工程中设为不参与编译。本固件不运行无线收包、心跳、
-配对串口命令，不改写无线参数 Flash。211 工程及两端无线底层文件均未修改。
+以下参数和有线动作规则继续适用；本版需要分别测试有线与无线，同步操作的仲裁按约定留待后续。
 
 ## 输入、输出
 
@@ -26,7 +20,7 @@ while (1) {
 | PA10 | 快速继电器驱动 | 低 |
 | PB6 | KM1 运行许可 | 低 |
 | PB11 | 公共软件禁止 | 高 |
-| PB12/PB13 | 无线升/降请求 | 本版固定低 |
+| PB12/PB13 | 无线升/降请求 | 无线命令控制，有线单独运行时低 |
 
 GPIO 初始化先开启 GPIOA/GPIOB 时钟，先预写安全电平，再配置输出模式。
 默认 PB6/PB11 高、PA8/PA9/PA10 高、PB12/PB13 低；输入 PB3/4/5 配置上拉。
@@ -79,9 +73,9 @@ GPIO 初始化先开启 GPIOA/GPIOB 时钟，先预写安全电平，再配置�
 `drop` 递增，控制持续执行。`drop` 与无线丢包无关。
 
 ```text
-t=0 stop model speed=slow phase=STARTUP reason=STARTUP PB3/4/5=111 PB6/11=11 PA9/8/10=111 RF=OFF drop=0
-t=500 sleep model speed=slow phase=IDLE reason=NO_DIRECTION PB3/4/5=111 PB6/11=10 PA9/8/10=111 RF=OFF drop=0
-t=1000 you xian model up speed=slow phase=RUN reason=NONE PB3/4/5=011 PB6/11=00 PA9/8/10=011 RF=OFF drop=0
+t=0 stop model speed=slow phase=STARTUP reason=STARTUP PB3/4/5=111 PB6/11=11 PA9/8/10=111 RF=OFF PB12/13=00 drop=0
+t=500 sleep model speed=slow phase=IDLE reason=NO_DIRECTION PB3/4/5=111 PB6/11=10 PA9/8/10=111 RF=OFF PB12/13=00 drop=0
+t=1000 you xian model up speed=slow phase=RUN reason=NONE PB3/4/5=011 PB6/11=00 PA9/8/10=011 RF=OFF PB12/13=00 drop=0
 ```
 
 | 日志 | 条件 |
@@ -108,21 +102,21 @@ RUN 表示软件已完成输出准备与放行，不代表已测得接触器实�
 - `wired_config.h`：所有等待参数。
 - `validation/`：软件测试、构建日志及改动前 main/工程文件备份，运行工程不依赖此目录。
 
-后续有线/无线先做来源仲裁，再共用一套继电器执行，不能各自直接写 PA8/9/10、PB6/PB11。
-PB3/PB4 始终是共用方向信号，并非独立有线原始按键或触点反馈；本版只有在 PB12/13 为低时
-将其作为有线方向处理。无线失联撤销无线请求，不能把它直接接到全局软件禁止上影响有线。
-本版不提前实现不具备独立来源检测条件的自动无线仲裁，也不初始化旧无线 Demo。
-未来串口、计时、心跳与执行循环需统一接入，不能直接同时调用两套 App_Init/Process。
+当前 `ReceiverApp` 已接入 A2 无线命令，复用同一套继电器执行，并先确认 PB3/PB4 方向回路。
+PB3/PB4 仍不是独立来源检测脚，当前未实现同时操作的完整仲裁；不要把来源日志作为该场景的正确性证明。
+无线停止或超时清除无线请求，普通无线失联不拉高 PB11 来禁止有线。
+USART1 的发送统一进入无线服务的中断队列；`WiredControl_SetLogSink` 切换后停止独立轮询发送。
+直接仅调用 `WiredControl_Init/Process` 仍可用于独立有线软件回归，但正常烧录应使用 ReceiverApp 入口。
 
 ## 验证及完整板测试
 
 命令行运行：
 
 ```powershell
-python 221_Project/you-xian_interface/validation/check_wired.py
+python 221_Project/wu-xian-App/validation/integration/check_receiver.py
 ```
 
-脚本检查受保护源文件哈希，使用本机 GCC 测试真实控制逻辑和实际端口源码的模拟外设，
+当前集成脚本检查本次受保护源文件哈希，使用本机 GCC 测试真实控制逻辑、接收服务及实际端口源码的模拟外设，
 再使用本机 Keil 完整重编译原 221 工程。测试不连接硬件、不烧录。
 覆盖启动、输入抖动、立即停止、升降/快速、冲突恢复、换向换速顺序、软件禁止、短暂禁止、
 计时回绕、GPIO 预载和操作顺序、72MHz 预分频、500ms 日志、串口背压和输出读回异常。

@@ -1,8 +1,7 @@
 ./objects/wireless_demo.o: ..\wu-xian-App\wireless_demo.c \
-  ..\wu-xian-App\wireless_demo.h \
+  ..\wu-xian-App\wireless_demo.h D:\_Keil5\ARM\ARMCLANG\include\stdint.h \
   ..\Firmware\CMSIS\GD\GD32E23x\Include\gd32e23x.h \
   D:\_Keil5\packs\ARM\CMSIS\5.9.0\CMSIS\Core\Include\core_cm23.h \
-  D:\_Keil5\ARM\ARMCLANG\include\stdint.h \
   D:\_Keil5\packs\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_version.h \
   D:\_Keil5\packs\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_compiler.h \
   D:\_Keil5\packs\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_armclang.h \

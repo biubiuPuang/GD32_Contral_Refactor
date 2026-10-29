@@ -29,6 +29,8 @@
 ".\objects\cmt2300a_hal.o"
 ".\objects\cmt2300a.o"
 ".\objects\cmt2219b.o"
+".\objects\receiver_app.o"
+".\objects\wireless_demo.o"
 ".\objects\wired_control.o"
 ".\objects\wired_port.o"
 --library_type=microlib --strict --scatter ".\Objects\GD32E230C8T6.sct"

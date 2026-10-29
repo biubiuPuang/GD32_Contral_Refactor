@@ -1,10 +1,10 @@
-#include "wired_control.h"
+#include "receiver_app.h"
 
 int main(void)
 {
-    WiredControl_Init();
+    ReceiverApp_Init();
     while (1)
     {
-        WiredControl_Process();
+        ReceiverApp_Process();
     }
 }
