@@ -1,0 +1,13 @@
+{
+  "probe": "68004200040000515953574E",
+  "target": "gd32e230c8",
+  "verified_image_bytes": 10824,
+  "readback_mismatches": 0,
+  "changed_bytes": 2,
+  "changed_addresses": [
+    "0x8001222",
+    "0x8001224"
+  ],
+  "after_sha256": "f51d18e74ccf4c1c593da6025c1c9e9e829b9f882f6ab6ffef9d66e46460e80d",
+  "receiver_reflashed": false
+}

@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>GD32E230</Define>
               <Undefine></Undefine>
-              <IncludePath>..\User;..\Firmware\GD32E23x_standard_peripheral\Include;..\Firmware\CMSIS\GD\GD32E23x\Include;..\Firmware\CMSIS;..\Hardware;..\wu-xian_interface</IncludePath>
+              <IncludePath>..\User;..\Firmware\GD32E23x_standard_peripheral\Include;..\Firmware\CMSIS\GD\GD32E23x\Include;..\Firmware\CMSIS;..\Hardware;..\wu-xian_interface;..\wu-xian-App</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -566,6 +566,26 @@
               <FileName>cmt2119b.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\wu-xian_interface\cmt2119b.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>wu-xian-App</GroupName>
+          <Files>
+            <File>
+              <FileName>wireless_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\wu-xian-App\wireless_demo.c</FilePath>
+            </File>
+            <File>
+              <FileName>wireless_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\wu-xian-App\wireless_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>wireless_demo_params.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\wu-xian-App\wireless_demo_params.h</FilePath>
             </File>
           </Files>
         </Group>

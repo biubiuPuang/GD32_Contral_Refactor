@@ -1,0 +1,19 @@
+{
+  "COM2": {
+    "reports": 50,
+    "first_seq": 1013,
+    "last_seq": 1634,
+    "first_total": 1013,
+    "last_total": 1634,
+    "max_err": 0
+  },
+  "COM18": {
+    "reports": 50,
+    "first_seq": 1014,
+    "last_seq": 1635,
+    "first_total": 40131,
+    "last_total": 40750,
+    "max_err": 0
+  },
+  "result": "PASS: RX sequence advances with TX, each decoded payload matches its sequence, zero reported errors."
+}
