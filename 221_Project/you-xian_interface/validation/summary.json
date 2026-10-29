@@ -1,0 +1,19 @@
+{
+  "errors": 0,
+  "warnings": 0,
+  "program_size": "Program Size: Code=6446 RO-data=486 RW-data=0 ZI-data=1344  \r",
+  "hex_end_exclusive": "0x8001b14",
+  "hex_sha256": "2239d0d60fd29858d977505e205dd205f71bbacfedb0e69dbce16133d3dd2d0e",
+  "protected_files": 94,
+  "hardware_tested": false,
+  "tests": [
+    "PASS: startup, debounce, immediate stop, up/down, fast-only, reversal, speed, conflict, software stop, recovery, rollover, 200000-step interlocks.",
+    "PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 500ms logs, UART backpressure, brief software stop, output readback fault."
+  ],
+  "sources": {
+    "wired_config.h": "d079a3003d2f0d1df4ee0b8ce90961dabd424070588eb991a6305d4953e51765",
+    "wired_control.c": "271e8086f70e40f9dd335050cd01c5430fc1775c28304c143a0d9f42c49acfd4",
+    "wired_control.h": "4ab5d79b543d3337554c21bfb4afe15343fc7db0e0c52575d21b9a592be7a37f",
+    "wired_port.c": "6a2e019c69f0220cddd45c1c0d948e392424b225b71ddac38c9e984a5939c730"
+  }
+}
