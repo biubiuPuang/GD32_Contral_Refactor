@@ -25,6 +25,12 @@ uint32_t timer_counter_read(uint32_t timer);
 #define SET 1U
 #define RCU_GPIOA 5U
 #define GPIOA 6U
+#define RCU_GPIOB 7U
+#define GPIOB 8U
+#define GPIO_PIN_3 (1U << 3)
+#define GPIO_PIN_4 (1U << 4)
+#define GPIO_PIN_5 (1U << 5)
+#define GPIO_PIN_6 (1U << 6)
 #define GPIO_PIN_9 (1U << 9)
 #define GPIO_PIN_10 (1U << 10)
 #define GPIO_MODE_INPUT 0U
@@ -48,6 +54,7 @@ void __enable_irq(void);
 void nvic_irq_enable(uint32_t irq, uint32_t priority);
 void gpio_mode_set(uint32_t port, uint32_t mode, uint32_t pull, uint32_t pins);
 uint32_t gpio_input_bit_get(uint32_t port, uint32_t pin);
+uint16_t gpio_input_port_get(uint32_t port);
 uint32_t usart_flag_get(uint32_t port, uint32_t flag);
 void usart_flag_clear(uint32_t port, uint32_t flag);
 uint16_t usart_data_receive(uint32_t port);

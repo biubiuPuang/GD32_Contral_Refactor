@@ -1,0 +1,27 @@
+{
+  "errors": 0,
+  "warnings": 0,
+  "program_size": "Program Size: Code=16680 RO-data=984 RW-data=4 ZI-data=1868",
+  "hex_end_exclusive": "0x8004508",
+  "hex_sha256": "b9493a8536a12902c031297810e85fa46cd4197a4cbee121a9f99da0455c7f30",
+  "protected_files": 101,
+  "hardware_tested": false,
+  "protocol": "A2",
+  "commands": {
+    "STOP": 0,
+    "UP": 1,
+    "DOWN": 2,
+    "UP_FAST": 5,
+    "DOWN_FAST": 6
+  },
+  "tests": [
+    "211 three-key + protocol A2 + multi-device behavior tests PASS",
+    "221 multi-device behavior tests PASS"
+  ],
+  "sources": {
+    "main_example.c": "5e84ee5b2a3e13ba80a4881660c1a29cf7354878bb0affe54d4429cd03ebfd4d",
+    "wireless_demo.c": "4633fb68fda82405a33738845707090d6dcf00d0fd4ce4877eafc088328d28da",
+    "wireless_demo.h": "668dc46b05ce8cb49ca4a6f0d39a85132207bafc79e48559a2ffd4c8ff1c2201",
+    "wireless_demo_params.h": "1047d181cb81401214b425bd7bc32b5c1da2702cc38bd2b97552617f8acd3895"
+  }
+}
