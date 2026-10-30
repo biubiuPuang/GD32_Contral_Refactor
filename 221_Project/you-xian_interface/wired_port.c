@@ -14,6 +14,7 @@ static uint16_t g_last_timer;
 static uint8_t g_half_ms;
 static uint32_t g_now_ms, g_report_at, g_log_drops;
 static uint8_t g_software_stop;
+static uint8_t g_remote_estop;
 static uint8_t g_output_fault;
 static uint8_t g_remote_target, g_remote_applied, g_remote_transition, g_remote_settling;
 static uint32_t g_remote_at;
@@ -82,7 +83,7 @@ static WiredInput WiredPort_ReadInput(void)
     input.up = (uint8_t)((pins & GPIO_PIN_3) == 0U);
     input.down = (uint8_t)((pins & GPIO_PIN_4) == 0U);
     input.fast = (uint8_t)((pins & GPIO_PIN_5) == 0U);
-    input.software_stop = g_software_stop;
+    input.software_stop = (uint8_t)(g_software_stop || g_remote_estop);
     return input;
 }
 
@@ -142,7 +143,8 @@ static void WiredPort_Report(uint32_t now)
     int length;
     const char *mode = WiredLogic_ModeName(&g_wired);
     const char *remote = "OFF";
-    if(g_remote_target == 1U) remote = "UP";
+    if(g_remote_estop) remote = "ESTOP";
+    else if(g_remote_target == 1U) remote = "UP";
     else if(g_remote_target == 2U) remote = "DOWN";
     else if(g_remote_target == 5U) remote = "UP_FAST";
     else if(g_remote_target == 6U) remote = "DOWN_FAST";
@@ -183,6 +185,7 @@ void WiredControl_Init(void)
     usart_init(115200U); /* Existing BSP enables UART and GPIO clocks. */
     WiredPort_TimerInit();
     g_software_stop = 0U;
+    g_remote_estop = 0U;
     g_output_fault = 0U;
     g_remote_target = 0U; g_remote_applied = 0U;
     g_remote_transition = 0U; g_remote_settling = 0U; g_remote_at = 0U;
@@ -198,19 +201,32 @@ void WiredControl_Init(void)
     WiredPort_Report(0U);
 }
 
+static void WiredPort_AssertStop(void)
+{
+    WiredInput input;
+    /* Physical inhibit immediately; record it even if cleared again before
+     * Process. PB11 removes circuit power, not MCU/radio power: keep polling. */
+    gpio_bit_set(GPIOB, GPIO_PIN_6 | GPIO_PIN_11);
+    input = WiredPort_ReadInput();
+    WiredLogic_Step(&g_wired, input, WiredPort_Now());
+    (void)WiredPort_Apply(&g_wired.output);
+}
+
 void WiredControl_SetSoftwareStop(uint8_t active)
 {
-    /* Call in main context. A real hardware E-stop acts independently of MCU. */
+    /* Main context. Hardware E-stop acts independently of these reasons. */
     g_software_stop = (uint8_t)(active != 0U || g_output_fault);
-    if(g_software_stop) {
-        WiredInput input;
-        /* Physical inhibit immediately; record the stop even if the caller
-         * clears it again before the next Process iteration. */
-        gpio_bit_set(GPIOB, GPIO_PIN_6 | GPIO_PIN_11);
-        input = WiredPort_ReadInput();
-        WiredLogic_Step(&g_wired, input, WiredPort_Now());
-        (void)WiredPort_Apply(&g_wired.output);
-    }
+    if(g_software_stop) WiredPort_AssertStop();
+}
+
+void WiredControl_SetRemoteEmergencyStop(uint8_t active)
+{
+    active = (uint8_t)(active != 0U);
+    if(active == g_remote_estop) return;
+    g_remote_estop = active;
+    if(active) WiredPort_AssertStop();
+    /* Clear only RF E-stop. Process releases PB11 and observes circuit settle;
+     * do not wait for PB3/PB4 while PB11 is still cutting their circuit power. */
 }
 
 void WiredControl_SetLogSink(uint8_t (*sink)(const char *line))
@@ -239,7 +255,7 @@ void WiredControl_SetRemoteCommand(uint8_t command)
     /* Remove KM FIRST, then deassert both RF direction requests. Never
      * reinterpret a decaying RF feedback signal as a new wired command. */
     input.up = 0U; input.down = 0U; input.fast = 0U;
-    input.software_stop = g_software_stop;
+    input.software_stop = (uint8_t)(g_software_stop || g_remote_estop);
     WiredLogic_Step(&g_wired, input, now);
     gpio_bit_set(GPIOB, GPIO_PIN_6);
     g_remote_applied = 0U;
@@ -254,7 +270,7 @@ void WiredControl_Process(void)
     uint32_t now = WiredPort_Now();
     WiredInput input = WiredPort_ReadInput();
     g_physical_input = input;
-    if(g_remote_transition && !g_software_stop && !g_wired.output.inhibit &&
+    if(g_remote_transition && !g_software_stop && !g_remote_estop && !g_wired.output.inhibit &&
        g_wired.phase == WIRED_IDLE) {
         if(!g_remote_settling) {
             g_remote_applied = g_remote_target;

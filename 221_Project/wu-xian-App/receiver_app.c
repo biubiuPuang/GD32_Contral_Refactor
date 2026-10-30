@@ -19,15 +19,25 @@ void ReceiverApp_Init(void)
     WirelessDemo_SetMaintenanceHook(ReceiverApp_Maintenance);
 }
 
+static void ReceiverApp_SyncRemote(void)
+{
+    uint8_t command = WirelessDemo_GetCommand();
+    /* Valid RF E-stop overrides wired as well as RF motion. The RX service
+     * returns STOP after 85 ms/fault/unpairing, so RF loss releases ONLY this
+     * inhibit reason and restores wired control. No persistent E-stop latch. */
+    WiredControl_SetRemoteEmergencyStop((uint8_t)(command == WIRELESS_CMD_ESTOP));
+    WiredControl_SetRemoteCommand(command == WIRELESS_CMD_ESTOP ? WIRELESS_CMD_STOP : command);
+}
+
 void ReceiverApp_Process(void)
 {
     /* Service motion before and after SPI/UART work. Radio initialization
      * retries wait for idle so a missing radio does not periodically interrupt
      * an already-running wired operation. */
-    WiredControl_SetRemoteCommand(WirelessDemo_GetCommand());
+    ReceiverApp_SyncRemote();
     WiredControl_Process();
     WirelessDemo_SetRetryAllowed(WiredControl_RadioRetryAllowed());
     WirelessDemo_Process();
-    WiredControl_SetRemoteCommand(WirelessDemo_GetCommand());
+    ReceiverApp_SyncRemote();
     WiredControl_Process();
 }

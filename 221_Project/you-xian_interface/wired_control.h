@@ -53,6 +53,10 @@ const char *WiredLogic_ModeName(const WiredLogic *logic);
 void WiredControl_Init(void);
 void WiredControl_Process(void);
 void WiredControl_SetSoftwareStop(uint8_t active);
+/* Wireless E-stop is an independent inhibit reason. Clear only this reason
+ * on valid release, RF expiry/fault or reboot; never clear maintenance/faults.
+ * It inhibits BOTH wired and RF motion while the received state is valid. */
+void WiredControl_SetRemoteEmergencyStop(uint8_t active);
 
 /* Shared execution adapter. This does NOT implement simultaneous wired/RF
  * priority arbitration. Commands: 0=STOP, 1=UP, 2=DOWN, 5/6=FAST UP/DOWN.

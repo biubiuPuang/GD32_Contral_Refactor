@@ -31,6 +31,7 @@ uint32_t timer_counter_read(uint32_t timer);
 #define GPIO_PIN_4 (1U << 4)
 #define GPIO_PIN_5 (1U << 5)
 #define GPIO_PIN_6 (1U << 6)
+#define GPIO_PIN_8 (1U << 8)
 #define GPIO_PIN_9 (1U << 9)
 #define GPIO_PIN_10 (1U << 10)
 #define GPIO_MODE_INPUT 0U

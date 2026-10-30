@@ -53,7 +53,7 @@ static BOOL Demo_ValidCommand(u8 command)
 {
     return (BOOL)(command == WIRELESS_CMD_STOP || command == WIRELESS_CMD_UP ||
                   command == WIRELESS_CMD_DOWN || command == WIRELESS_CMD_UP_FAST ||
-                  command == WIRELESS_CMD_DOWN_FAST);
+                  command == WIRELESS_CMD_DOWN_FAST || command == WIRELESS_CMD_ESTOP);
 }
 
 static const char *Demo_CommandName(u8 command)
@@ -64,6 +64,7 @@ static const char *Demo_CommandName(u8 command)
     case WIRELESS_CMD_DOWN: return "DOWN";
     case WIRELESS_CMD_UP_FAST: return "UP_FAST";
     case WIRELESS_CMD_DOWN_FAST: return "DOWN_FAST";
+    case WIRELESS_CMD_ESTOP: return "ESTOP";
     default: return "INVALID";
     }
 }
@@ -346,7 +347,7 @@ static void Demo_RxProcess(void)
 static void Demo_ShowConfig(void)
 {
     u32 frequency = 433920U + 150U * g_config.channel;
-    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=A2\r\n",
+    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=A2 ESTOP=08\r\n",
            (unsigned long)g_config.id, (unsigned long)g_config.channel,
            (unsigned long)(frequency / 1000U), (unsigned long)(frequency % 1000U),
            (unsigned long)g_config.configured, g_demo.storage_ok ? "OK" : "OVERLAP",
@@ -458,7 +459,7 @@ void WirelessDemo_Init(void)
     Demo_ConfigLoad();
     g_demo.error = g_demo.storage_ok ? "UNPAIRED" : "FLASH_OVERLAP";
     usart_interrupt_enable(BSP_USART, USART_INT_RBNE); nvic_irq_enable(USART1_IRQn, 1U);
-    Demo_Print("\r\nRECEIVER V3 RX221 PROTO=A2 UART=115200 8N1\r\n");
+    Demo_Print("\r\nRECEIVER V3 RX221 PROTO=A2 UART=115200 8N1 ESTOP=08\r\n");
     if(g_config.configured && g_demo.storage_ok) (void)Demo_RadioInit();
     Demo_ShowConfig(); g_demo.report_at = Demo_Now();
 }

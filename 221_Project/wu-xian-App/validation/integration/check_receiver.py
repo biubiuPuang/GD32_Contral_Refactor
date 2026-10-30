@@ -37,7 +37,8 @@ def project_check():
         tx = (ROOT / "211_Project/wu-xian-App" / name).read_text(encoding="utf-8")
         rx = (APP / name).read_text(encoding="utf-8")
         for macro in ("WIRELESS_CONTROL_TAG", "WIRELESS_CMD_STOP", "WIRELESS_CMD_UP",
-                      "WIRELESS_CMD_DOWN", "WIRELESS_CMD_FAST", "WIRELESS_CMD_UP_FAST", "WIRELESS_CMD_DOWN_FAST"):
+                      "WIRELESS_CMD_DOWN", "WIRELESS_CMD_FAST", "WIRELESS_CMD_UP_FAST", "WIRELESS_CMD_DOWN_FAST",
+                      "WIRELESS_CMD_ESTOP"):
             pattern = rf"^#define\s+{macro}\s+(.+)$"
             assert re.search(pattern, tx, re.M).group(1) == re.search(pattern, rx, re.M).group(1), macro
     for side in ("211", "221"):
@@ -55,8 +56,11 @@ def simulate(name, source, includes):
     cmd += ["-I" + str(p) for p in includes]
     cmd += [str(WIRED / "wired_control.c"), str(source), "-o", str(executable)]
     subprocess.run(cmd, check=True, timeout=30)
-    result = subprocess.run([str(executable)], check=True, timeout=20, capture_output=True, text=True)
+    result = subprocess.run([str(executable)], timeout=20, capture_output=True, text=True)
     print(result.stdout.strip(), flush=True)
+    if result.returncode:
+        print(result.stderr.strip(), flush=True)
+        result.check_returncode()
     return result.stdout.strip()
 
 
@@ -99,7 +103,8 @@ if __name__ == "__main__":
     summary.update({"protected_files": count, "hardware_tested": False,
                     "simultaneous_wired_wireless_arbitration_implemented": False,
                     "protocol": "A2", "wireless_timeout_ms": 85, "tests": results,
+                    "wireless_estop_expires_to_wired": True, "wireless_estop_persistent": False,
                     "sources": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                 for folder in (APP, WIRED) for p in folder.glob("*") if p.suffix in (".c", ".h")}})
     (HERE / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"PASS: {count} protected source files unchanged; original 221 project built, 211 unchanged, no board flashed.", flush=True)
+    print(f"PASS: {count} protected source files unchanged; original 221 project built, no board flashed.", flush=True)

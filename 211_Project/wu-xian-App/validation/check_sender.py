@@ -1,7 +1,8 @@
-"""Validate current TX211 only; preserve the complete wired RX221 project.
+"""Validate current TX211 (three keys + PA8 wireless E-stop).
 
-No hardware access or flashing. The separate old 221 wireless parser is only
-host-tested to ensure it rejects the new A2 frames; it is not built/flashed.
+No hardware access or flashing. RX221 now accepts A2, including E-stop 08;
+its actual receive/execute behavior is tested by integration/check_receiver.py,
+replacing the obsolete expectation that the old A1 parser rejects all A2.
 """
 from pathlib import Path
 import hashlib
@@ -55,8 +56,11 @@ def simulate(side):
                "-I" + str(source.parent), "-I" + str(target / "wu-xian_interface"),
                "-I" + str(target / "User"), str(HERE / "simulate_multi.c"), "-o", str(executable)]
     subprocess.run(command, check=True, timeout=30)
-    result = subprocess.run([str(executable)], check=True, timeout=15, capture_output=True, text=True)
+    result = subprocess.run([str(executable)], timeout=15, capture_output=True, text=True)
     print(result.stdout.strip(), flush=True)
+    if result.returncode:
+        print(result.stderr.strip(), flush=True)
+        result.check_returncode()
     return result.stdout.strip()
 
 
@@ -87,12 +91,13 @@ if __name__ == "__main__":
     count = protected()
     project_check()
     parameters()
-    results = [simulate("211"), simulate("221")]
+    results = [simulate("211")]
     summary = build()
     project_check()
     assert protected() == count
     summary.update({"protected_files": count, "hardware_tested": False,
-                    "protocol": "A2", "commands": {"STOP": 0, "UP": 1, "DOWN": 2, "UP_FAST": 5, "DOWN_FAST": 6},
+                    "protocol": "A2", "commands": {"STOP": 0, "UP": 1, "DOWN": 2, "UP_FAST": 5, "DOWN_FAST": 6, "ESTOP": 8},
+                    "estop_pin": "PA8 active-low", "debounce_ms": 10,
                     "tests": results,
                     "sources": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in APP.glob("*") if p.suffix in (".c", ".h")}})

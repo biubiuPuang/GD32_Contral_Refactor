@@ -294,7 +294,7 @@ static void test_timeout_filter_and_feedback(void)
     inject(2U, 1U, 0xA2U, good); inject(1U, 1U, 0xA1U, good);
     inject(1U, 1U, 0xA2U, CMT2300A_MASK_PKT_OK_FLG);
     for(unsigned cmd = 0; cmd < 256U; ++cmd)
-        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 5U && cmd != 6U)
+        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 5U && cmd != 6U && cmd != 8U)
             inject(1U, (u8)cmd, 0xA2U, good);
     tick(1U);
     assert(!g_wired.output.allow && !(latch[GPIOB] & WIRED_REQUEST_PINS));
@@ -354,6 +354,86 @@ static void test_faults_maintenance_and_uart(void)
     assert(!g_wired.output.allow && (latch[GPIOB] & GPIO_PIN_11));
 }
 
+static void expect_estop(void)
+{
+    assert(g_remote_estop && !g_wired.output.allow && g_wired.output.inhibit);
+    assert((latch[GPIOB] & (GPIO_PIN_6 | GPIO_PIN_11)) == (GPIO_PIN_6 | GPIO_PIN_11));
+    assert(!(latch[GPIOB] & WIRED_REQUEST_PINS));
+}
+
+static void test_wireless_estop(void)
+{
+    const u8 good = CMT2300A_MASK_PKT_OK_FLG | CMT2300A_MASK_CRC_OK_FLG;
+    static const u8 motion[] = {1U, 2U, 5U, 6U};
+    /* Global priority over every RF direction/speed, sustained by fresh packets. */
+    for(unsigned i = 0U; i < sizeof(motion); ++i) {
+        reset(1); configure(1U, 0U); tick(110U);
+        held(motion[i], 240U); expect_run(motion[i]);
+        valid(WIRELESS_CMD_ESTOP); expect_estop();
+        held(WIRELESS_CMD_ESTOP, 620U); expect_estop();
+        assert(!g_wired.output.up && !g_wired.output.down && !g_wired.output.fast);
+        assert(strstr(output, "EVENT ESTOP PACKET") && strstr(output, "RF=ESTOP"));
+        held(motion[i], 300U); expect_run(motion[i]); /* Current valid state resumes. */
+    }
+    /* The same valid E-stop also stops wired RUN; STOP releases only RF E-stop. */
+    reset(1); configure(1U, 0U); tick(150U); wired_up = wired_fast = 1U;
+    tick(41U); expect_run(5U);
+    valid(WIRELESS_CMD_ESTOP); expect_estop(); held(WIRELESS_CMD_ESTOP, 300U);
+    valid(0U); tick(300U); expect_run(5U);
+    /* 84 ms retains E-stop. Bad CRC/ID/tag/command cannot release or renew it. */
+    valid(WIRELESS_CMD_ESTOP); tick(84U); expect_estop();
+    inject(2U, 0U, 0xA2U, good); inject(1U, 0U, 0xA1U, good);
+    inject(1U, 0U, 0xA2U, CMT2300A_MASK_PKT_OK_FLG);
+    for(unsigned cmd = 0U; cmd < 256U; ++cmd)
+        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 5U && cmd != 6U && cmd != 8U)
+            inject(1U, (u8)cmd, 0xA2U, good);
+    expect_estop(); tick(1U);
+    assert(!g_remote_estop && WirelessDemo_GetCommand() == 0U);
+    tick(300U); expect_run(5U); /* Loss restores wired without a release packet. */
+    /* No wired request on loss means idle; stale RF direction never restarts. */
+    wired_up = wired_fast = 0U; tick(100U);
+    held(6U, 240U); expect_run(6U); valid(WIRELESS_CMD_ESTOP); tick(400U);
+    assert(!g_remote_estop && !g_wired.output.allow && !g_wired.output.fast);
+    assert(!(latch[GPIOB] & WIRED_REQUEST_PINS));
+    /* Physical E-stop is independent; RF expiry cannot override that circuit. */
+    wired_down = 1U; tick(41U); expect_run(2U);
+    valid(WIRELESS_CMD_ESTOP); physical_estop = 1U; tick(400U);
+    assert(!g_remote_estop && !g_wired.output.allow);
+    assert(!(latch[GPIOB] & GPIO_PIN_11)); /* Software released, hardware still blocks. */
+    physical_estop = 0U; tick(150U); expect_run(2U);
+    /* Radio faults also return to wired, rather than leaving a stale inhibit. */
+    valid(WIRELESS_CMD_ESTOP); rx_fail = 1; status = CMT2300A_STA_STBY; service();
+    assert(!g_demo.ready && !g_remote_estop); tick(300U); expect_run(2U);
+    rx_fail = 0; wired_down = 0U; tick(1300U); assert(g_demo.ready);
+    /* E-stop renewal must remain nonblocking even with a full UART queue. */
+    uart_ready = 0;
+    for(unsigned i = 0U; i < 30U; ++i)
+        (void)WirelessDemo_Log("A complete queued diagnostic line\r\n");
+    held(WIRELESS_CMD_ESTOP, 1200U); expect_estop();
+    assert(g_demo.log_drops); uart_ready = 1; flush_output();
+    /* Clearing RF E-stop must never clear a separate maintenance inhibit. */
+    WiredControl_SetSoftwareStop(1U); tick(100U);
+    assert(!g_remote_estop && g_software_stop && (latch[GPIOB] & GPIO_PIN_11));
+    valid(WIRELESS_CMD_ESTOP); expect_estop(); valid(0U); tick(200U);
+    assert(g_software_stop && (latch[GPIOB] & GPIO_PIN_11));
+    WiredControl_SetSoftwareStop(0U); tick(150U);
+    /* Explicit SET/DEFAULT maintenance and a sticky output fault stay separate. */
+    valid(WIRELESS_CMD_ESTOP); configure(1U, 0U); tick(200U);
+    assert(!g_remote_estop && !(latch[GPIOB] & GPIO_PIN_11));
+    valid(WIRELESS_CMD_ESTOP); output_fault = 1; service();
+    output_fault = 0; tick(200U);
+    assert(!g_remote_estop && g_output_fault && (latch[GPIOB] & GPIO_PIN_11));
+    /* Receiver restart forgets old RF state; a new packet determines E-stop. */
+    reset(0); tick(110U); assert(!g_remote_estop && WirelessDemo_GetCommand() == 0U);
+    wired_up = 1U; tick(41U); expect_run(1U);
+    valid(WIRELESS_CMD_ESTOP); expect_estop(); reset(0); tick(110U);
+    valid(0U); assert(!g_remote_estop); wired_up = 1U; tick(41U); expect_run(1U);
+    /* E-stop expiry remains correct across the 32-bit radio time wrap. */
+    g_demo.ticks = UINT32_MAX - 200U; valid(WIRELESS_CMD_ESTOP);
+    tick(84U); expect_estop(); tick(1U); assert(!g_remote_estop);
+    tick(300U); expect_run(1U);
+}
+
 static void test_storage_and_rollover(void)
 {
     reset(1); for(u32 id = 1U; id <= 33U; ++id) configure(id, id % 6U);
@@ -376,7 +456,7 @@ static void test_storage_and_rollover(void)
 int main(void)
 {
     test_wired_and_radio_absence(); test_motion_and_stops(); test_timeout_filter_and_feedback();
-    test_faults_maintenance_and_uart(); test_storage_and_rollover();
-    puts("PASS integrated real RX + GPIO + execution: A2 five commands, wired regression/unpaired/radio absent, feedback gating, limit/E-stop restore, STOP/85ms timeout, no stale RF-to-wired restart, reversal/fast timing, CRC/ID/tag/invalid commands, journal power loss, config maintenance, UART backpressure, faults, timer rollover.");
+    test_faults_maintenance_and_uart(); test_wireless_estop(); test_storage_and_rollover();
+    puts("PASS integrated real RX + GPIO + execution: A2 motion/STOP/wireless E-stop, global E-stop priority, 85ms E-stop expiry restores wired, physical E-stop independent, release/reboot/fault/maintenance isolation, wired regression/unpaired/radio absent, feedback gating, no stale RF restart, reversal/fast timing, CRC/ID/tag/all invalid commands, journal power loss, UART backpressure, timer rollover.");
     return 0;
 }

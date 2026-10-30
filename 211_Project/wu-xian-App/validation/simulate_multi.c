@@ -73,7 +73,7 @@ uint32_t timer_counter_read(uint32_t t) { assert(t==TIMER2);return counter; }
 void gpio_mode_set(uint32_t port,uint32_t mode,uint32_t pull,uint32_t p)
 {
     assert(mode==GPIO_MODE_INPUT && pull==GPIO_PUPD_PULLUP);
-    if(port==GPIOA) assert((gpio_clock&1) && p==(GPIO_PIN_9|GPIO_PIN_10));
+    if(port==GPIOA) assert((gpio_clock&1) && p==(GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10));
     else assert(port==GPIOB && (gpio_clock&2) && p==(GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6));
 }
 uint32_t gpio_input_bit_get(uint32_t port,uint32_t p) { assert(port==GPIOA);return pins&p?SET:RESET; }
@@ -149,7 +149,7 @@ static void reset(int clear_flash)
     timer_clock_enabled=gpio_clock=systick_ready=corrupt_readback=0;
     rx_fail=overflow=done=fifo_selected=fifo_cleared=stby_fail=0;
     available=1;flags=0;status=CMT2300A_STA_STBY;
-    pins=GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;irq_mask=0;
+    pins=GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;irq_mask=0;
     flash_writes=flash_erases=program_calls=0;flash_unlocked=fail_program=fail_erase=tx_irq=0;
     image_limit=0x08006000U;
     WirelessDemo_Init();flush_output();
@@ -243,7 +243,7 @@ static void drain_stops(void)
 }
 /* Sample a complete physical key state, then allow its independent 10-ms
  * debounce to finish. A conflict itself must stop on the first sample. */
-static const u32 all_keys=GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+static const u32 all_keys=GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
 static void keys(u32 pressed)
 {
     pins=all_keys&~pressed;advance(1);advance(DEMO_DEBOUNCE_TICKS);
@@ -368,6 +368,58 @@ static void check_button(void)
     stby_fail=0;advance(10000U);assert(g_demo.ready);
 }
 
+static void check_estop(void)
+{
+    unsigned before;
+    /* Startup with PA8 held must never transmit a preliminary STOP. */
+    reset(1);configure(1,0);assert(!fifo_writes);
+    pins&=~GPIO_PIN_8;advance(1);advance(99);
+    assert(!g_demo.estop_ready && !fifo_writes);
+    advance(1);expect_command(WIRELESS_CMD_ESTOP);
+    assert(g_demo.busy && packet[5]==0x08U && !g_demo.stops_left);
+    for(unsigned i=0;i<12U;++i) {
+        u32 wait=g_demo.next_at-g_demo.started_at;
+        assert(wait>=400U && wait<=600U);
+        finish_tx();advance((u16)(wait-190U));
+        assert(g_demo.busy);expect_command(WIRELESS_CMD_ESTOP);
+    }
+    /* E-stop overrides all 64 direction/speed contact combinations. */
+    for(unsigned state=0;state<64U;++state) {
+        static const u32 contacts[]={GPIO_PIN_3,GPIO_PIN_4,GPIO_PIN_9,GPIO_PIN_10,GPIO_PIN_5,GPIO_PIN_6};
+        u32 pressed=GPIO_PIN_8;
+        for(unsigned j=0;j<6U;++j)if(state&(1U<<j))pressed|=contacts[j];
+        keys(pressed);expect_command(WIRELESS_CMD_ESTOP);
+        if(g_demo.busy)finish_tx();
+    }
+    /* Debounce both PA8 edges; assertion preempts an in-flight motion packet,
+     * and release restores the currently held direction without a re-press. */
+    keys(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_5);
+    pins|=GPIO_PIN_8;advance(1);advance(99);expect_command(WIRELESS_CMD_ESTOP);
+    pins&=~GPIO_PIN_8;advance(1);pins|=GPIO_PIN_8;advance(1);advance(100);
+    expect_command(WIRELESS_CMD_UP_FAST);assert(g_demo.busy);
+    pins&=~GPIO_PIN_8;advance(1);advance(99);expect_command(WIRELESS_CMD_UP_FAST);
+    pins|=GPIO_PIN_8;advance(1);pins&=~GPIO_PIN_8;advance(1);advance(100);
+    expect_command(WIRELESS_CMD_ESTOP);assert(g_demo.busy && packet[5]==0x08U);
+    keys(GPIO_PIN_8);expect_command(WIRELESS_CMD_ESTOP);
+    keys(0U);expect_command(WIRELESS_CMD_STOP);
+    before=fifo_writes;drain_stops();assert(fifo_writes==before+2U);
+    before=fifo_writes;advance(1000U);assert(fifo_writes==before);
+    assert(strstr(output,"estop=1 cmd=ESTOP"));
+    /* No E-stop state is persisted. A reboot sends the actual sampled state. */
+    keys(GPIO_PIN_8);expect_command(WIRELESS_CMD_ESTOP);
+    reset(0);assert(!g_demo.estop_ready && !fifo_writes);
+    advance(100U);expect_command(WIRELESS_CMD_STOP);assert(packet[5]==0U);
+    reset(0);pins&=~GPIO_PIN_8;WirelessDemo_Init();
+    advance(99U);assert(!fifo_writes);advance(1U);
+    expect_command(WIRELESS_CMD_ESTOP);assert(packet[5]==0x08U);
+    /* Radio recovery and 32-bit time wrap also use the current PA8 state. */
+    advance(DEMO_TX_TIMEOUT);assert(!g_demo.ready);
+    advance(10000U);WirelessDemo_Process();expect_command(WIRELESS_CMD_ESTOP);
+    pins|=GPIO_PIN_8;advance(1);advance(100);drain_stops();
+    g_demo.ticks=UINT32_MAX-50U;g_demo.previous_timer=counter;
+    pins&=~GPIO_PIN_8;advance(1);advance(100);expect_command(WIRELESS_CMD_ESTOP);
+}
+
 #else
 static void inject(u32 id,u8 action,u8 tag,u8 event_flags)
 {
@@ -398,9 +450,9 @@ int main(void)
 {
     check_configuration();check_power_loss();check_uart_and_faults();
 #if WIRELESS_DEMO_TX
-    check_button();
+    check_button();check_estop();
 #else
     check_receive();
 #endif
-    puts(WIRELESS_DEMO_TX?"211 three-key + protocol A2 + multi-device behavior tests PASS":"221 multi-device behavior tests PASS");return 0;
+    puts(WIRELESS_DEMO_TX?"211 three-key + PA8 E-stop debounce/priority/repeat/release/reboot + protocol A2 behavior tests PASS":"221 multi-device behavior tests PASS");return 0;
 }
