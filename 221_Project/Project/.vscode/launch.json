@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "221 AT-Link: Keil build and debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/Objects/GD32E230C8T6.axf",
+            "loadFiles": ["${workspaceFolder}/Objects/GD32E230C8T6.hex"],
+            "servertype": "pyocd",
+            "serverpath": "D:/1_Sofrware/Python_3.14.6/Scripts/pyocd.exe",
+            "armToolchainPath": "C:/Users/admin/.eide/tools/gcc_arm/bin",
+            "targetId": "gd32e230c8",
+            "serverArgs": [
+                "--uid", "cmsisdap:CBD275220040B56D01173002",
+                "--frequency", "1000000",
+                "--connect", "halt",
+                "--erase", "sector",
+                "-O", "reset_type=sysresetreq",
+                "-O", "auto_unlock=false"
+            ],
+            "runToEntryPoint": "main",
+            "preLaunchTask": "Keil: build for debugging"
+        }
+    ]
+}

@@ -56,7 +56,10 @@ void WiredControl_SetSoftwareStop(uint8_t active);
 
 /* Shared execution adapter. This does NOT implement simultaneous wired/RF
  * priority arbitration. Commands: 0=STOP, 1=UP, 2=DOWN, 5/6=FAST UP/DOWN.
- * A source/direction/speed change first removes KM permission and requests,
+ * Known bug (deferred): same-direction wired takeover may retain RF FAST;
+ * an opposite wired direction may be filtered while an RF target is active.
+ * Shared PB3/PB4 cannot identify every source change; see WiredControl_Process.
+ * A remote command change first removes KM permission and requests,
  * completes existing relay release, then waits for direction-path settling.
  */
 void WiredControl_SetRemoteCommand(uint8_t command);

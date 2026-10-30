@@ -268,6 +268,17 @@ void WiredControl_Process(void)
     if(g_remote_transition) {
         input.up = 0U; input.down = 0U; input.fast = 0U;
     } else if(g_remote_applied) {
+        /* TODO: Known wired/RF arbitration bug, intentionally deferred.
+         * PB3/PB4 are shared post-limit direction inputs, not raw wired keys;
+         * WIRED_IDLE is not available to the MCU. A wired slow-UP takeover
+         * during RF fast-UP can leave PB3 unchanged, so the RF FAST bit below
+         * can incorrectly keep fast drive active for the wired request.
+         * An opposite wired direction can also be filtered by the RF target.
+         * Hardware request gating alone does not make this software adapter
+         * implement wired priority. Mixed-source speed/source reporting is
+         * not reliable. No periodic RF interruption/probing is implemented;
+         * a future arbitration strategy must be agreed before fixing this.
+         */
         /* RF intent never substitutes for actual post-limit direction input.
          * The common feedback must match the requested direction. */
         if(!(input.up && input.down)) {
