@@ -96,10 +96,12 @@ if __name__ == "__main__":
     project_check()
     assert protected() == count
     summary.update({"protected_files": count, "hardware_tested": False,
-                    "protocol": "A2", "commands": {"STOP": 0, "UP": 1, "DOWN": 2, "UP_FAST": 5, "DOWN_FAST": 6, "ESTOP": 8},
+                    "protocol": "A2", "commands": {"STOP": 0, "UP": 1, "DOWN": 2, "CONFLICT": 3, "FAST_ONLY": 4, "UP_FAST": 5, "DOWN_FAST": 6, "ESTOP": 8},
+                    "status_log_period_ms": 1000, "idle_heartbeat": False,
+                    "status_only_never_drives_motor": True,
                     "estop_pin": "PA8 active-low", "debounce_ms": 10,
                     "tests": results,
                     "sources": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in APP.glob("*") if p.suffix in (".c", ".h")}})
     (HERE / "sender_v3_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"PASS: {count} protected files unchanged, original 211 Keil project built; 221 project untouched, no board flashed.", flush=True)
+    print(f"PASS: {count} protected files unchanged, original 211 Keil project built; no board flashed.", flush=True)

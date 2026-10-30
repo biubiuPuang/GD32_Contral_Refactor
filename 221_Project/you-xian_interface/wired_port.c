@@ -16,6 +16,7 @@ static uint32_t g_now_ms, g_report_at, g_log_drops;
 static uint8_t g_software_stop;
 static uint8_t g_remote_estop;
 static uint8_t g_output_fault;
+static uint8_t g_remote_status; /* 03/04 are display states, never execution targets. */
 static uint8_t g_remote_target, g_remote_applied, g_remote_transition, g_remote_settling;
 static uint32_t g_remote_at;
 static uint8_t (*g_log_sink)(const char *line);
@@ -138,44 +139,54 @@ static void WiredPort_LogProcess(void)
         usart_data_transmit(BSP_USART, (uint8_t)g_log[g_log_sent++]);
 }
 
+const char *WiredControl_Error(void)
+{
+    if(g_output_fault) return "OUTPUT_MISMATCH";
+    return g_wired.fault ? "INTERNAL_STATE" : NULL;
+}
+
+const char *WiredControl_StatusLine(void)
+{
+    if(WiredControl_Error()) return "wu-xian not connect\r\n";
+    if(g_remote_estop || g_software_stop) return "stop model\r\n";
+    if((g_physical_input.up && g_physical_input.down) ||
+       g_wired.reason == WIRED_REASON_CONFLICT) return "error model\r\n";
+    /* Do not claim an action while KM/relays are being changed or settling. */
+    if(g_remote_transition || (g_wired.phase != WIRED_RUN && g_wired.phase != WIRED_IDLE))
+        return NULL;
+    if(g_wired.phase == WIRED_RUN && g_wired.output.allow && !g_wired.output.inhibit) {
+        if(g_remote_applied) {
+            if(g_wired.output.up) return g_wired.output.fast ? "wu-xian fast up\r\n" : "wu-xian up\r\n";
+            return g_wired.output.fast ? "wu-xian fast dowm\r\n" : "wu-xian dowm\r\n";
+        }
+        if(g_wired.output.up) return g_wired.output.fast ? "you-xian fast up\r\n" : "you-xian up\r\n";
+        return g_wired.output.fast ? "you-xian fast dowm\r\n" : "you-xian dowm\r\n";
+    }
+    if(g_remote_status == 3U) return "error model\r\n";
+    if(g_physical_input.fast && !g_physical_input.up && !g_physical_input.down)
+        return "you-xian fast\r\n";
+    if(g_remote_status == 4U) return "wu-xian fast\r\n";
+    /* No independent limit/E-stop input: 'cant' means RF request not passed,
+     * including limit, physical E-stop or other hardware gating. It does not
+     * identify the cause. Wired raw direction keys are not observable either.
+     * Mixed-source reporting retains the documented arbitration limitation. */
+    if(g_remote_target & 1U) return "cant up model\r\n";
+    if(g_remote_target & 2U) return "cant dowm model\r\n";
+    return "sleep model\r\n";
+}
+
 static void WiredPort_Report(uint32_t now)
 {
     int length;
-    const char *mode = WiredLogic_ModeName(&g_wired);
-    const char *remote = "OFF";
-    if(g_remote_estop) remote = "ESTOP";
-    else if(g_remote_target == 1U) remote = "UP";
-    else if(g_remote_target == 2U) remote = "DOWN";
-    else if(g_remote_target == 5U) remote = "UP_FAST";
-    else if(g_remote_target == 6U) remote = "DOWN_FAST";
-    if(g_remote_applied && !g_remote_transition && g_wired.phase == WIRED_RUN &&
-       g_wired.output.allow && !g_wired.output.inhibit)
-        mode = g_wired.output.up ? "wu xian model up" : "wu xian model down";
-    else if((g_remote_target || g_remote_transition) && g_wired.phase == WIRED_IDLE)
-        mode = "wait model";
+    const char *line = WiredControl_StatusLine();
+    const char *error = WiredControl_Error();
+    (void)now;
+    if(!line) return;
     if(g_log_sent < g_log_size) { ++g_log_drops; return; }
-    length = snprintf(g_log, sizeof(g_log),
-        "t=%lu %s speed=%s phase=%s reason=%s "
-        "PB3/4/5=%u%u%u PB6/11=%u%u PA9/8/10=%u%u%u RF=%s PB12/13=%u%u drop=%lu\r\n",
-        (unsigned long)now, mode,
-        g_wired.output.fast ? "fast" : "slow",
-        WiredLogic_PhaseName(g_wired.phase),
-        g_output_fault ? "OUTPUT_MISMATCH" : WiredLogic_ReasonName(g_wired.reason),
-        (unsigned)!g_physical_input.up, (unsigned)!g_physical_input.down,
-        (unsigned)!g_physical_input.fast, (unsigned)!g_wired.output.allow,
-        (unsigned)g_wired.output.inhibit, (unsigned)!g_wired.output.up,
-        (unsigned)!g_wired.output.down, (unsigned)!g_wired.output.fast, remote,
-        (unsigned)!!(g_remote_applied & 1U), (unsigned)!!(g_remote_applied & 2U),
-        (unsigned long)g_log_drops);
-    if(length < 0 || length >= (int)sizeof(g_log)) {
-        ++g_log_drops; g_log_sent = 0U; g_log_size = 0U; return;
-    }
-    g_log_sent = 0U;
-    g_log_size = (uint16_t)length;
-    if(g_log_sink) {
-        if(!g_log_sink(g_log)) ++g_log_drops;
-        g_log_size = 0U;
-    }
+    length = snprintf(g_log, sizeof(g_log), "%s%s%s%s", line,
+                      error ? "ERR EXEC " : "", error ? error : "", error ? "\r\n" : "");
+    if(length < 0 || length >= (int)sizeof(g_log)) { ++g_log_drops; return; }
+    g_log_sent = 0U; g_log_size = (uint16_t)length;
 }
 
 void WiredControl_Init(void)
@@ -187,7 +198,7 @@ void WiredControl_Init(void)
     g_software_stop = 0U;
     g_remote_estop = 0U;
     g_output_fault = 0U;
-    g_remote_target = 0U; g_remote_applied = 0U;
+    g_remote_status = 0U; g_remote_target = 0U; g_remote_applied = 0U;
     g_remote_transition = 0U; g_remote_settling = 0U; g_remote_at = 0U;
     g_log_sink = NULL;
     g_physical_input = WiredPort_ReadInput();
@@ -198,7 +209,6 @@ void WiredControl_Init(void)
         g_output_fault = 1U;
         WiredControl_SetSoftwareStop(1U);
     }
-    WiredPort_Report(0U);
 }
 
 static void WiredPort_AssertStop(void)
@@ -246,6 +256,9 @@ void WiredControl_SetRemoteCommand(uint8_t command)
 {
     WiredInput input;
     uint32_t now;
+    /* Preserve status-only packets for display; never expose their direction
+     * bits to execution GPIOs. In particular 03 must NOT become UP+DOWN. */
+    g_remote_status = command;
     if(command != 0U && command != 1U && command != 2U && command != 5U && command != 6U)
         command = 0U;
     if(command == g_remote_target) return;
@@ -312,7 +325,7 @@ void WiredControl_Process(void)
         WiredLogic_Step(&g_wired, input, now);
         (void)WiredPort_Apply(&g_wired.output);
     }
-    if((uint32_t)(now - g_report_at) >= WIRED_REPORT_MS) {
+    if(!g_log_sink && (uint32_t)(now - g_report_at) >= WIRED_REPORT_MS) {
         g_report_at = now;
         WiredPort_Report(now);
     }

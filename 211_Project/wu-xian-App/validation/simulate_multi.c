@@ -287,12 +287,12 @@ static void check_button(void)
     keys(GPIO_PIN_4);expect_command(WIRELESS_CMD_UP);
     keys(0);expect_command(WIRELESS_CMD_STOP);drain_stops();
 
-    /* FAST alone is idle on either stage; adding/removing it alters the full
+    /* FAST alone reports status on either stage; adding/removing it alters the full
      * direction+speed command and preempts an old in-flight packet. */
     before=fifo_writes;
-    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_STOP);
-    keys(GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_STOP);
-    keys(GPIO_PIN_6);expect_command(WIRELESS_CMD_STOP);assert(fifo_writes==before);
+    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_FAST);
+    keys(GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_FAST);
+    keys(GPIO_PIN_6);expect_command(WIRELESS_CMD_FAST);assert(fifo_writes>before);
     keys(GPIO_PIN_3|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP_FAST);
     keys(GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP_FAST);
     keys(GPIO_PIN_3|GPIO_PIN_5);expect_command(WIRELESS_CMD_UP_FAST);
@@ -300,18 +300,18 @@ static void check_button(void)
     keys(GPIO_PIN_9);expect_command(WIRELESS_CMD_DOWN);
     keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
     /* Direction release stops even while FAST remains held. */
-    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_STOP);drain_stops();
+    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_FAST);
 
     /* Opposite direction raw assertion aborts an already sending UP packet,
      * without first waiting for the new key's debounce or TX_DONE. */
     keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);assert(g_demo.busy);
     pins&=~GPIO_PIN_9;advance(1);
-    assert(g_demo.button_conflict);expect_command(WIRELESS_CMD_STOP);
-    assert(g_demo.busy && packet[5]==0);
-    pins|=GPIO_PIN_9;advance(1);advance(98);expect_command(WIRELESS_CMD_STOP);
+    assert(g_demo.button_conflict);expect_command(WIRELESS_CMD_CONFLICT);
+    assert(g_demo.busy && packet[5]==WIRELESS_CMD_CONFLICT);
+    pins|=GPIO_PIN_9;advance(1);advance(98);expect_command(WIRELESS_CMD_CONFLICT);
     advance(1);expect_command(WIRELESS_CMD_UP);
-    keys(GPIO_PIN_3|GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_STOP);
-    drain_stops();before=fifo_writes;advance(1000);assert(fifo_writes==before);
+    keys(GPIO_PIN_3|GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_CONFLICT);
+    finish_tx();advance(600U);assert(g_demo.busy && packet[5]==WIRELESS_CMD_CONFLICT);
     keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
     keys(0);expect_command(WIRELESS_CMD_STOP);drain_stops();
 
@@ -336,7 +336,8 @@ static void check_button(void)
         for(unsigned j=0;j<6U;++j)if(state&(1U<<j))pressed|=contact[j];
         if((state&3U) && !(state&12U))expected=WIRELESS_CMD_UP;
         if((state&12U) && !(state&3U))expected=WIRELESS_CMD_DOWN;
-        if(expected && (state&48U))expected|=WIRELESS_CMD_FAST;
+        if(state&48U)expected|=WIRELESS_CMD_FAST;
+        if((state&3U) && (state&12U))expected=WIRELESS_CMD_CONFLICT;
         keys(pressed);expect_command(expected);
         if(expected) assert(g_demo.busy && packet[5]==expected);
         else { drain_stops();assert(!g_demo.busy); }
@@ -355,7 +356,7 @@ static void check_button(void)
     g_demo.sequence=65535U;finish_tx();assert(g_demo.sequence==0U);
     advance(600U);assert(packet[6]==0U && packet[7]==0U);
     keys(0);drain_stops();
-    assert(strstr(output,"PROTO=A2") && strstr(output,"cmd=DOWN_FAST"));
+    assert(strstr(output,"PROTO=A2") && !strstr(output,"KEY "));
 
     /* Key timing across 16/32-bit wrap; radio failures stay recoverable. */
     reset(1);configure(1,0);drain_stops();
@@ -366,6 +367,54 @@ static void check_button(void)
     keys(0);drain_stops();keys(GPIO_PIN_3);assert(g_demo.busy);
     stby_fail=1;keys(GPIO_PIN_9);assert(!g_demo.ready && !strcmp(g_demo.error,"BUTTON_STBY"));
     stby_fail=0;advance(10000U);assert(g_demo.ready);
+}
+
+/* Complete local TX operations while advancing the real application clock;
+ * otherwise a 1-second log test would deliberately trigger TX_TIMEOUT. */
+static void log_ticks(unsigned ticks)
+{
+    while(ticks--) {
+        if(g_demo.busy) { done=1;status=CMT2300A_STA_STBY; }
+        advance(1U);
+    }
+}
+static void clear_output(void) { output_length=0U;output[0]='\0'; }
+static void expect_snapshot(u32 pressed, const char *expected)
+{
+    keys(pressed);clear_output();
+    log_ticks(10000U-(u32)(g_demo.ticks-g_demo.report_at));
+    assert(strcmp(output,expected)==0);
+}
+static void check_snapshot_logs(void)
+{
+    reset(1);configure(1U,0U);reset(0);
+    assert(strstr(output,"FREQ=433.920MHz") && strstr(output,"INIT OK\r\n"));
+    clear_output();log_ticks(9999U);assert(!output_length);
+    log_ticks(1U);assert(strcmp(output,"sleep model\r\n")==0);
+    expect_snapshot(GPIO_PIN_3,"up\r\n");
+    expect_snapshot(GPIO_PIN_9,"dowm\r\n");
+    expect_snapshot(GPIO_PIN_3|GPIO_PIN_5,"fast up\r\n");
+    expect_snapshot(GPIO_PIN_9|GPIO_PIN_5,"fast dowm\r\n");
+    expect_snapshot(GPIO_PIN_5,"wu-xian fast\r\n");
+    expect_snapshot(GPIO_PIN_3|GPIO_PIN_9,"error model\r\n");
+    expect_snapshot(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_9,"stop model\r\n");
+    expect_snapshot(0U,"sleep model\r\n");
+    /* A complete short press between snapshots must not produce edge logs. */
+    clear_output();keys(GPIO_PIN_3);keys(0U);assert(!output_length);
+    log_ticks(10000U-(u32)(g_demo.ticks-g_demo.report_at));
+    assert(strcmp(output,"sleep model\r\n")==0);
+    /* GET/HELP remain immediate; periodic failures never repeat configuration. */
+    clear_output();command("GET");command("HELP");
+    assert(strstr(output,"CFG ID=") && strstr(output,"GET | SET"));
+    corrupt_readback=1;configure(1U,0U);assert(!g_demo.ready);
+    clear_output();log_ticks(20000U);
+    assert(strstr(output,"ERR RADIO CONFIG_READBACK\r\n") && !strstr(output,"connect"));
+    assert(!strstr(output,"CFG ") && !strstr(output,"INIT ") && !strstr(output,"KEY "));
+    corrupt_readback=0;log_ticks(10000U);assert(g_demo.ready);
+    clear_output();log_ticks(10000U);assert(strcmp(output,"sleep model\r\n")==0);
+    g_demo.ticks=UINT32_MAX-5000U;g_demo.report_at=g_demo.ticks;
+    clear_output();log_ticks(9999U);assert(!output_length);
+    log_ticks(1U);assert(strcmp(output,"sleep model\r\n")==0);
 }
 
 static void check_estop(void)
@@ -404,7 +453,7 @@ static void check_estop(void)
     keys(0U);expect_command(WIRELESS_CMD_STOP);
     before=fifo_writes;drain_stops();assert(fifo_writes==before+2U);
     before=fifo_writes;advance(1000U);assert(fifo_writes==before);
-    assert(strstr(output,"estop=1 cmd=ESTOP"));
+    assert(!strstr(output,"KEY ") && !strstr(output,"EVENT "));
     /* No E-stop state is persisted. A reboot sends the actual sampled state. */
     keys(GPIO_PIN_8);expect_command(WIRELESS_CMD_ESTOP);
     reset(0);assert(!g_demo.estop_ready && !fifo_writes);
@@ -450,7 +499,7 @@ int main(void)
 {
     check_configuration();check_power_loss();check_uart_and_faults();
 #if WIRELESS_DEMO_TX
-    check_button();check_estop();
+    check_button();check_estop();check_snapshot_logs();
 #else
     check_receive();
 #endif

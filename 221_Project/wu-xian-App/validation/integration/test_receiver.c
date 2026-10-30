@@ -243,7 +243,7 @@ static void test_wired_and_radio_absence(void)
     unsigned before;
     reset(1); assert(!g_config.configured && !g_demo.ready);
     tick(110U); wired_up = 1U; tick(41U); expect_run(1U);
-    tick(500U); assert(strstr(output, "you xian model up"));
+    tick(1000U); assert(strstr(output, "you-xian up\r\n"));
     assert(!(latch[GPIOB] & WIRED_REQUEST_PINS));
     wired_fast = 1U; tick(125U); expect_run(5U);
     wired_up = 0U; service(); assert(latch[GPIOB] & GPIO_PIN_6);
@@ -265,11 +265,11 @@ static void test_motion_and_stops(void)
         reset(1); configure(1U, 0U); tick(110U);
         held(cmd, 240U); expect_run(cmd);
         assert(latch[GPIOB] & ((cmd & 1U) ? GPIO_PIN_12 : GPIO_PIN_13));
-        held(cmd, 510U);
-        assert(strstr(output, (cmd & 1U) ? "wu xian model up" : "wu xian model down"));
+        held(cmd, 1010U);
+        assert(strstr(output, (cmd & 1U) ? (cmd & 4U ? "wu-xian fast up\r\n" : "wu-xian up\r\n") : (cmd & 4U ? "wu-xian fast dowm\r\n" : "wu-xian dowm\r\n")));
         if(cmd & 4U) {
             assert(g_physical_input.fast == 0U); /* RF FAST is not physical PB5. */
-            assert(strstr(output, (cmd & 1U) ? "PB3/4/5=011" : "PB3/4/5=101"));
+            assert(g_physical_input.up == !!(cmd & 1U) && g_physical_input.down == !!(cmd & 2U));
         }
         valid(0U); assert(latch[GPIOB] & GPIO_PIN_6);
         assert(!(latch[GPIOB] & WIRED_REQUEST_PINS));
@@ -294,11 +294,11 @@ static void test_timeout_filter_and_feedback(void)
     inject(2U, 1U, 0xA2U, good); inject(1U, 1U, 0xA1U, good);
     inject(1U, 1U, 0xA2U, CMT2300A_MASK_PKT_OK_FLG);
     for(unsigned cmd = 0; cmd < 256U; ++cmd)
-        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 5U && cmd != 6U && cmd != 8U)
+        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 3U && cmd != 4U && cmd != 5U && cmd != 6U && cmd != 8U)
             inject(1U, (u8)cmd, 0xA2U, good);
     tick(1U);
     assert(!g_wired.output.allow && !(latch[GPIOB] & WIRED_REQUEST_PINS));
-    assert(WirelessDemo_GetCommand() == 0U && strstr(output, "EVENT STOP TIMEOUT"));
+    assert(WirelessDemo_GetCommand() == 0U && !strstr(output, "EVENT "));
     tick(300U); assert(!g_wired.output.allow);
 
     /* Valid RF intention must never synthesize direction/limit feedback. */
@@ -370,9 +370,9 @@ static void test_wireless_estop(void)
         reset(1); configure(1U, 0U); tick(110U);
         held(motion[i], 240U); expect_run(motion[i]);
         valid(WIRELESS_CMD_ESTOP); expect_estop();
-        held(WIRELESS_CMD_ESTOP, 620U); expect_estop();
+        held(WIRELESS_CMD_ESTOP, 1020U); expect_estop();
         assert(!g_wired.output.up && !g_wired.output.down && !g_wired.output.fast);
-        assert(strstr(output, "EVENT ESTOP PACKET") && strstr(output, "RF=ESTOP"));
+        assert(strstr(output, "stop model\r\n") && !strstr(output, "EVENT "));
         held(motion[i], 300U); expect_run(motion[i]); /* Current valid state resumes. */
     }
     /* The same valid E-stop also stops wired RUN; STOP releases only RF E-stop. */
@@ -385,7 +385,7 @@ static void test_wireless_estop(void)
     inject(2U, 0U, 0xA2U, good); inject(1U, 0U, 0xA1U, good);
     inject(1U, 0U, 0xA2U, CMT2300A_MASK_PKT_OK_FLG);
     for(unsigned cmd = 0U; cmd < 256U; ++cmd)
-        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 5U && cmd != 6U && cmd != 8U)
+        if(cmd != 0U && cmd != 1U && cmd != 2U && cmd != 3U && cmd != 4U && cmd != 5U && cmd != 6U && cmd != 8U)
             inject(1U, (u8)cmd, 0xA2U, good);
     expect_estop(); tick(1U);
     assert(!g_remote_estop && WirelessDemo_GetCommand() == 0U);
@@ -434,6 +434,85 @@ static void test_wireless_estop(void)
     tick(300U); expect_run(1U);
 }
 
+static void clear_output(void) { output_length=0U;output[0]='\0'; }
+static unsigned occurrences(const char *needle)
+{
+    unsigned n=0U;const char *p=output;
+    while((p=strstr(p,needle))!=NULL) { ++n;p+=strlen(needle); }
+    return n;
+}
+static void test_snapshot_logs_and_status_only(void)
+{
+    static const u8 status_only[]={WIRELESS_CMD_FAST,WIRELESS_CMD_CONFLICT};
+    reset(1);configure(1U,0U);reset(0);
+    assert(strstr(output,"FREQ=433.920MHz") && strstr(output,"INIT OK\r\n"));
+    clear_output();tick(999U);assert(!output_length);
+    tick(1U);assert(!strcmp(output,"sleep model\r\nwu-xian not connect\r\n"));
+    /* STOP is also a valid fresh link packet, not just nonzero motion. */
+    clear_output();tick(999U);valid(0U);assert(!output_length);tick(1U);
+    assert(!strcmp(output,"sleep model\r\nwu-xian connect ing\r\n"));
+    clear_output();tick(1000U);
+    assert(!strcmp(output,"sleep model\r\nwu-xian not connect\r\n"));
+    for(unsigned i=0U;i<sizeof(status_only);++i) {
+        clear_output();held(status_only[i],1000U);
+        assert(!g_wired.output.allow && !g_wired.output.up && !g_wired.output.down && !g_wired.output.fast);
+        assert(!(latch[GPIOB]&WIRED_REQUEST_PINS) && !g_remote_target && !g_remote_applied);
+        assert(!strcmp(output,i==0U ? "wu-xian fast\r\nwu-xian connect ing\r\n" : "error model\r\nwu-xian connect ing\r\n"));
+    }
+    /* New status-only packets must stop a previously running RF action. */
+    for(unsigned i=0U;i<sizeof(status_only);++i) {
+        held(5U,300U);expect_run(5U);valid(status_only[i]);
+        assert(!g_wired.output.allow && !(latch[GPIOB]&WIRED_REQUEST_PINS));
+        held(status_only[i],300U);assert(!g_wired.output.up && !g_wired.output.down && !g_wired.output.fast);
+    }
+    /* Status-only RF data cannot supply speed or a direction to wired motion. */
+    valid(0U);tick(200U);wired_up=1U;tick(41U);expect_run(1U);
+    for(unsigned i=0U;i<sizeof(status_only);++i) {
+        held(status_only[i],300U);expect_run(1U);
+        assert(!strcmp(WiredControl_StatusLine(),"you-xian up\r\n"));
+    }
+    wired_fast=1U;tick(130U);expect_run(5U);
+    assert(!strcmp(WiredControl_StatusLine(),"you-xian fast up\r\n"));
+    wired_up=0U;wired_down=1U;tick(150U);expect_run(6U);
+    assert(!strcmp(WiredControl_StatusLine(),"you-xian fast dowm\r\n"));
+    wired_fast=0U;tick(130U);expect_run(2U);
+    assert(!strcmp(WiredControl_StatusLine(),"you-xian dowm\r\n"));
+    wired_down=0U;tick(200U);
+    valid(0U);tick(200U);wired_fast=1U;tick(20U);
+    assert(!strcmp(WiredControl_StatusLine(),"you-xian fast\r\n"));
+    wired_up=1U;wired_down=1U;service();assert(!strcmp(WiredControl_StatusLine(),"error model\r\n"));
+    wired_up=wired_down=wired_fast=0U;tick(200U);
+    /* cant means RF request without matching shared direction feedback. */
+    no_feedback=1U;held(1U,1000U);assert(strstr(output,"cant up model\r\n"));
+    held(2U,1000U);assert(strstr(output,"cant dowm model\r\n"));
+    assert(!g_wired.output.allow);
+    no_feedback=0U;held(1U,300U);expect_run(1U);
+    /* Arrange a source change exactly at report time: no stale RUN line. */
+    tick(999U-(sim_ms%1000U));clear_output();
+    packet[0]=packet[1]=packet[2]=0U;packet[3]=1U;packet[4]=WIRELESS_CONTROL_TAG;packet[5]=6U;
+    flags=CMT2300A_MASK_PKT_OK_FLG|CMT2300A_MASK_CRC_OK_FLG;status=CMT2300A_STA_STBY;
+    tick(1U);assert(!strcmp(output,"wu-xian connect ing\r\n"));
+    assert(!WiredControl_StatusLine());
+    /* Output faults emit a distinct recurring error and force link abnormal. */
+    output_fault=1;service();clear_output();tick(2000U);
+    assert(occurrences("ERR EXEC OUTPUT_MISMATCH\r\n")==2U);
+    assert(!strstr(output,"wu-xian connect ing") && !strstr(output,"CFG "));
+    /* Radio initialization/readback errors repeat once per second, and stop
+     * after recovery. Wired actions are still displayed during radio faults. */
+    reset(1);corrupt_readback=1;configure(1U,0U);clear_output();tick(2000U);
+    assert(occurrences("ERR RADIO CONFIG_READBACK\r\n")==2U);
+    assert(!strstr(output,"CFG ") && !strstr(output,"EVENT ") && !strstr(output,"RX seq="));
+    corrupt_readback=0;tick(1000U);assert(g_demo.ready);
+    clear_output();tick(1000U);assert(!strstr(output,"ERR RADIO"));
+    command("GET");command("HELP");assert(strstr(output,"CFG ID=") && strstr(output,"GET | SET"));
+    reset(1);available=0;configure(1U,0U);tick(110U);wired_up=1U;tick(1000U);
+    assert(strstr(output,"you-xian up\r\n") && strstr(output,"ERR RADIO SPI_OR_STBY\r\n"));
+    reset(1);configure(1U,0U);tick(150U);
+    g_demo.ticks=UINT32_MAX-5000U;g_demo.report_at=g_demo.ticks;
+    clear_output();tick(999U);assert(!output_length);tick(1U);
+    assert(!strcmp(output,"sleep model\r\nwu-xian not connect\r\n"));
+}
+
 static void test_storage_and_rollover(void)
 {
     reset(1); for(u32 id = 1U; id <= 33U; ++id) configure(id, id % 6U);
@@ -457,6 +536,7 @@ int main(void)
 {
     test_wired_and_radio_absence(); test_motion_and_stops(); test_timeout_filter_and_feedback();
     test_faults_maintenance_and_uart(); test_wireless_estop(); test_storage_and_rollover();
+    test_snapshot_logs_and_status_only();
     puts("PASS integrated real RX + GPIO + execution: A2 motion/STOP/wireless E-stop, global E-stop priority, 85ms E-stop expiry restores wired, physical E-stop independent, release/reboot/fault/maintenance isolation, wired regression/unpaired/radio absent, feedback gating, no stale RF restart, reversal/fast timing, CRC/ID/tag/all invalid commands, journal power loss, UART backpressure, timer rollover.");
     return 0;
 }

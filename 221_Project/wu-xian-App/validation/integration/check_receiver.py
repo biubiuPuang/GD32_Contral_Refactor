@@ -38,7 +38,7 @@ def project_check():
         rx = (APP / name).read_text(encoding="utf-8")
         for macro in ("WIRELESS_CONTROL_TAG", "WIRELESS_CMD_STOP", "WIRELESS_CMD_UP",
                       "WIRELESS_CMD_DOWN", "WIRELESS_CMD_FAST", "WIRELESS_CMD_UP_FAST", "WIRELESS_CMD_DOWN_FAST",
-                      "WIRELESS_CMD_ESTOP"):
+                      "WIRELESS_CMD_ESTOP", "WIRELESS_CMD_CONFLICT"):
             pattern = rf"^#define\s+{macro}\s+(.+)$"
             assert re.search(pattern, tx, re.M).group(1) == re.search(pattern, rx, re.M).group(1), macro
     for side in ("211", "221"):
@@ -102,7 +102,9 @@ if __name__ == "__main__":
     assert protected() == count
     summary.update({"protected_files": count, "hardware_tested": False,
                     "simultaneous_wired_wireless_arbitration_implemented": False,
-                    "protocol": "A2", "wireless_timeout_ms": 85, "tests": results,
+                    "protocol": "A2", "wireless_timeout_ms": 85,
+                    "status_log_period_ms": 1000, "idle_heartbeat": False,
+                    "status_only_never_drives_motor": True, "tests": results,
                     "wireless_estop_expires_to_wired": True, "wireless_estop_persistent": False,
                     "sources": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                 for folder in (APP, WIRED) for p in folder.glob("*") if p.suffix in (".c", ".h")}})

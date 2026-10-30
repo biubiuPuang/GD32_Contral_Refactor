@@ -17,6 +17,7 @@ void ReceiverApp_Init(void)
     WirelessDemo_Init();
     WiredControl_SetLogSink(WirelessDemo_Log);
     WirelessDemo_SetMaintenanceHook(ReceiverApp_Maintenance);
+    WirelessDemo_SetStatusProvider(WiredControl_StatusLine, WiredControl_Error);
 }
 
 static void ReceiverApp_SyncRemote(void)
@@ -40,4 +41,5 @@ void ReceiverApp_Process(void)
     WirelessDemo_Process();
     ReceiverApp_SyncRemote();
     WiredControl_Process();
+    WirelessDemo_ReportProcess();
 }

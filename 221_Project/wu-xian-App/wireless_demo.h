@@ -12,12 +12,14 @@
 #define WIRELESS_CMD_STOP          0x00U
 #define WIRELESS_CMD_UP            0x01U
 #define WIRELESS_CMD_DOWN          0x02U
+#define WIRELESS_CMD_CONFLICT      0x03U
 #define WIRELESS_CMD_FAST          0x04U
 #define WIRELESS_CMD_ESTOP         0x08U
 #define WIRELESS_CMD_UP_FAST       (WIRELESS_CMD_UP | WIRELESS_CMD_FAST)
 #define WIRELESS_CMD_DOWN_FAST     (WIRELESS_CMD_DOWN | WIRELESS_CMD_FAST)
 void WirelessDemo_Init(void);
 void WirelessDemo_Process(void);
+void WirelessDemo_ReportProcess(void); /* Call after execution update. */
 /* STOP if fault, unpaired or >=85ms old; E-stop also expires (not latched). */
 uint8_t WirelessDemo_GetCommand(void);
 uint8_t WirelessDemo_Log(const char *line); /* Complete nonblocking UART line. */
@@ -25,5 +27,8 @@ void WirelessDemo_SetRetryAllowed(uint8_t allowed);
 /* Pause physical execution around explicit SET/DEFAULT maintenance, including
  * Flash operations. NULL is permitted for service-only host tests. */
 void WirelessDemo_SetMaintenanceHook(void (*hook)(uint8_t active));
+/* Project callbacks: sampled once per 1000ms in main context. A NULL status
+ * line suppresses action output during relay transitions. */
+void WirelessDemo_SetStatusProvider(const char *(*status)(void), const char *(*error)(void));
 
 #endif

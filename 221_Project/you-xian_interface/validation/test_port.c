@@ -1,6 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#undef assert
+#define assert(condition) do { if(!(condition)) { \
+    fprintf(stderr,"FAIL %s:%d: %s\n",__FILE__,__LINE__,#condition); exit(1); \
+} } while(0)
 #include "gd32e23x.h"
 #include "../wired_port.c"
 
@@ -78,12 +83,9 @@ void usart_data_transmit(uint32_t uart, uint8_t value)
     assert(serial_length + 1U < sizeof(serial_line));
     serial_line[serial_length++] = (char)value;
     if(value == '\n') {
-        unsigned long timestamp;
         serial_line[serial_length] = '\0';
-        assert(sscanf(serial_line, "t=%lu", &timestamp) == 1);
-        assert(timestamp % 500U == 0U);
-        assert(strstr(serial_line, "RF=OFF"));
-        if(strstr(serial_line, "you xian model up")) ++up_lines;
+        assert(!strstr(serial_line, "t=") && !strstr(serial_line, "PB3/4/5="));
+        if(strstr(serial_line, "you-xian up\r\n")) ++up_lines;
         ++report_lines; serial_length = 0U;
     }
 }
@@ -119,14 +121,14 @@ int main(void)
     pins_in &= (uint16_t)~GPIO_PIN_3; tick(41U);
     assert(!(latch[GPIOA] & GPIO_PIN_9) && !(latch[GPIOB] & GPIO_PIN_6));
     tick(1000U);
-    assert(up_lines == 2U && report_lines == 3U);
+    assert(up_lines == 1U && report_lines == 1U);
     /* A 0.5-ms sample must not count as a whole millisecond. */
     before = g_now_ms; ++timer_count; WiredControl_Process();
     assert(g_now_ms == before);
     ++timer_count; WiredControl_Process(); assert(g_now_ms == before + 1U);
     /* UART not ready must never stall release/reversal. */
     serial_ready = 0U; before = serial_bytes;
-    tick(600U); assert(serial_bytes == before);
+    tick(1600U); assert(serial_bytes == before);
     pins_in |= GPIO_PIN_3; pins_in &= (uint16_t)~GPIO_PIN_4;
     WiredControl_Process(); assert(latch[GPIOB] & GPIO_PIN_6);
     tick(112U);
@@ -147,8 +149,8 @@ int main(void)
 
     board_reset(36000000U, 72000000U); tick(40000U);
     assert(g_now_ms == 40000U); /* Includes 16-bit timer rollover. */
-    assert(report_lines == 80U); /* t=0 plus 500..39500, 40000 still queued. */
+    assert(report_lines == 40U); /* Short lines finish in the same tick. */
     assert(!up_lines);
-    puts("PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 500ms logs, UART backpressure, brief software stop, output readback fault.");
+    puts("PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 1000ms snapshots, UART backpressure, brief software stop, output readback fault.");
     return 0;
 }

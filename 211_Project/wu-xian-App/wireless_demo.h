@@ -16,15 +16,16 @@
 /* On-air payload: ID[4, MSB first], TAG, COMMAND, SEQ_H, SEQ_L.
  * TAG changed from A1 (old generic RUN/STOP) to A2. Old receivers must not
  * interpret the new direction commands as the old generic RUN command.
- * Valid COMMAND values ONLY: 00, 01, 02, 05, 06, 08 (wireless E-stop).
+ * Valid COMMAND values ONLY: 00, 01, 02, 03, 04, 05, 06, 08.
  * E-stop is a complete state, never combined with direction/FAST bits.
- * FAST alone/both directions are not control commands.
+ * 03=direction conflict, 04=FAST alone: status only, NEVER motor commands.
  * TX FIFO still receives only the last four bytes.
  */
 #define WIRELESS_CONTROL_TAG       0xA2U
 #define WIRELESS_CMD_STOP          0x00U
 #define WIRELESS_CMD_UP            0x01U
 #define WIRELESS_CMD_DOWN          0x02U
+#define WIRELESS_CMD_CONFLICT      0x03U
 #define WIRELESS_CMD_FAST          0x04U
 #define WIRELESS_CMD_ESTOP         0x08U
 #define WIRELESS_CMD_UP_FAST       (WIRELESS_CMD_UP | WIRELESS_CMD_FAST)

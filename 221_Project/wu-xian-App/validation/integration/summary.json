@@ -1,31 +1,34 @@
 {
   "errors": 0,
   "warnings": 0,
-  "program_size": "Program Size: Code=20444 RO-data=1216 RW-data=4 ZI-data=2164",
-  "hex_end_exclusive": "0x80054a8",
-  "hex_sha256": "1ab9d7ea4c4c1dd6934be1e09a8a37e897e412a01384bc30160dfbc130b2f110",
+  "program_size": "Program Size: Code=21006 RO-data=938 RW-data=4 ZI-data=2172",
+  "hex_end_exclusive": "0x80055c0",
+  "hex_sha256": "b587d34e1d6a438a26e9149263d77c27d487ed0ed9ae45147f64a5d37d4ea891",
   "protected_files": 95,
   "hardware_tested": false,
   "simultaneous_wired_wireless_arbitration_implemented": false,
   "protocol": "A2",
   "wireless_timeout_ms": 85,
+  "status_log_period_ms": 1000,
+  "idle_heartbeat": false,
+  "status_only_never_drives_motor": true,
   "tests": [
     "PASS: startup, debounce, immediate stop, up/down, fast-only, reversal, speed, conflict, software stop, recovery, rollover, 200000-step interlocks.",
-    "PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 500ms logs, UART backpressure, brief software stop, output readback fault.",
+    "PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 1000ms snapshots, UART backpressure, brief software stop, output readback fault.",
     "PASS integrated real RX + GPIO + execution: A2 motion/STOP/wireless E-stop, global E-stop priority, 85ms E-stop expiry restores wired, physical E-stop independent, release/reboot/fault/maintenance isolation, wired regression/unpaired/radio absent, feedback gating, no stale RF restart, reversal/fast timing, CRC/ID/tag/all invalid commands, journal power loss, UART backpressure, timer rollover."
   ],
   "wireless_estop_expires_to_wired": true,
   "wireless_estop_persistent": false,
   "sources": {
     "221_Project\\wu-xian-App\\main_example.c": "1c7d07a0d0e7c55da704468a655bc7491be0565afe854034ffb04747c93311a2",
-    "221_Project\\wu-xian-App\\receiver_app.c": "1da892e0a37c9917fcd2b0e76f567b9c4b77a2ade06868d104ea9fc7e2841a53",
+    "221_Project\\wu-xian-App\\receiver_app.c": "3cad199837f5cd66548d0a401abefce5f508bcb77559203bc7caa7dde8eef779",
     "221_Project\\wu-xian-App\\receiver_app.h": "4a3c484e3e621dcd4563e626ba2c7bc0cc852da695812f0b1db5784d5a52f69f",
-    "221_Project\\wu-xian-App\\wireless_demo.c": "baa8360d6c77b82fef86a5b43ab7e7754e0462aab625f170c182d1b7ea8157b4",
-    "221_Project\\wu-xian-App\\wireless_demo.h": "4cec6d2ab5659c95aba504b1155982f47b8506349654721ac2a42ec12b161fbc",
+    "221_Project\\wu-xian-App\\wireless_demo.c": "f5962dc4992676c54c29bdedc418b2fa36143b5824e2d395bf8286ec752ea7a7",
+    "221_Project\\wu-xian-App\\wireless_demo.h": "1e870bbcde790e6f7617c4675b6b99dcd14fbb45e5d13e70bd39ff56d251e9b5",
     "221_Project\\wu-xian-App\\wireless_demo_params.h": "02acbb3cf73384989c9be0aa5bb0018e9e883fc1781dd7cb81816f43e0556483",
-    "221_Project\\you-xian_interface\\wired_config.h": "c0dc5377aa52c6d5dbb63b68e67a469777151b5b8aaa47b58cd4cc70a343878f",
+    "221_Project\\you-xian_interface\\wired_config.h": "d380f89ddf954acf86d9189a9fd36fb8ec4759083fd3699780fdfbd53853e7d2",
     "221_Project\\you-xian_interface\\wired_control.c": "271e8086f70e40f9dd335050cd01c5430fc1775c28304c143a0d9f42c49acfd4",
-    "221_Project\\you-xian_interface\\wired_control.h": "8a35d05e799a548a2ce91d8094095d0f5580c606d9aa2bebc0f8462ea67d6d13",
-    "221_Project\\you-xian_interface\\wired_port.c": "f8cb822ea0dfb5b2ab35930225697ca550ce416f6a4293dd363706a545e8de1b"
+    "221_Project\\you-xian_interface\\wired_control.h": "7f42e4b93e7f3a04b655c72664c935921843d908334ba2d6269b03ec395ccb78",
+    "221_Project\\you-xian_interface\\wired_port.c": "c5c02165b4c85269f75c9c612642e9baaf51395a5ddc5cb9a375513682bdf31e"
   }
 }

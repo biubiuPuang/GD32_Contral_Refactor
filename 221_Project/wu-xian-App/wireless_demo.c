@@ -18,7 +18,7 @@
 #define DEMO_CHANNEL_STEP 60U /* 150 kHz, hardware step unit 2.5 kHz */
 #define DEMO_RX_TIMEOUT 850U /* 85 ms from latest valid control packet */
 #define DEMO_RETRY_TICKS 10000U
-#define DEMO_PRINT_TICKS 5000U
+#define DEMO_PRINT_TICKS 10000U /* 1000ms, TIMER2=10kHz */
 #define DEMO_TAG WIRELESS_CONTROL_TAG
 #define DEMO_FLASH_FIRST 0x0800F800UL
 #define DEMO_FLASH_PAGE 1024U
@@ -47,26 +47,16 @@ static volatile u8 g_uart_fault;
 static volatile u8 g_uart_tx[DEMO_UART_TX_SIZE];
 static volatile u16 g_uart_tx_head, g_uart_tx_tail;
 static u8 g_retry_allowed;
+static const char *(*g_status_provider)(void);
+static const char *(*g_error_provider)(void);
 static void (*g_maintenance_hook)(uint8_t active);
 
 static BOOL Demo_ValidCommand(u8 command)
 {
     return (BOOL)(command == WIRELESS_CMD_STOP || command == WIRELESS_CMD_UP ||
                   command == WIRELESS_CMD_DOWN || command == WIRELESS_CMD_UP_FAST ||
-                  command == WIRELESS_CMD_DOWN_FAST || command == WIRELESS_CMD_ESTOP);
-}
-
-static const char *Demo_CommandName(u8 command)
-{
-    switch(command) {
-    case WIRELESS_CMD_STOP: return "STOP";
-    case WIRELESS_CMD_UP: return "UP";
-    case WIRELESS_CMD_DOWN: return "DOWN";
-    case WIRELESS_CMD_UP_FAST: return "UP_FAST";
-    case WIRELESS_CMD_DOWN_FAST: return "DOWN_FAST";
-    case WIRELESS_CMD_ESTOP: return "ESTOP";
-    default: return "INVALID";
-    }
+                  command == WIRELESS_CMD_DOWN_FAST || command == WIRELESS_CMD_ESTOP ||
+                  command == WIRELESS_CMD_FAST || command == WIRELESS_CMD_CONFLICT);
 }
 
 static u8 Demo_Queue(const char *text, u16 length)
@@ -255,10 +245,8 @@ static BOOL Demo_ConfigSave(const Demo_Config *config)
 
 static void Demo_SetAction(u8 action, const char *reason)
 {
-    if(action != g_demo.action) {
-        g_demo.action = action;
-        Demo_Print("EVENT %s %s\r\n", Demo_CommandName(action), reason);
-    }
+    (void)reason; /* State edges are silent; 1000ms snapshot is the only auto log. */
+    g_demo.action = action;
 }
 static BOOL Demo_Fail(const char *reason)
 {
@@ -347,7 +335,7 @@ static void Demo_RxProcess(void)
 static void Demo_ShowConfig(void)
 {
     u32 frequency = 433920U + 150U * g_config.channel;
-    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=A2 ESTOP=08\r\n",
+    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=A2 ESTOP=08 STATUS=03/04\r\n",
            (unsigned long)g_config.id, (unsigned long)g_config.channel,
            (unsigned long)(frequency / 1000U), (unsigned long)(frequency % 1000U),
            (unsigned long)g_config.configured, g_demo.storage_ok ? "OK" : "OVERLAP",
@@ -434,20 +422,17 @@ static void Demo_UartProcess(void)
 }
 static void Demo_Report(void)
 {
-    const char *side = "RX";
-    u8 action = g_demo.action;
-    if(g_demo.window && g_demo.have_latest) {
-        Demo_Print("%s seq=%u cmd=%s state=%s data=%02X %02X %02X %02X %02X %02X %02X %02X total=%lu new=%lu err=%lu\r\n",
-               side, (unsigned int)(((u16)g_demo.latest[6] << 8) | g_demo.latest[7]),
-               Demo_CommandName(g_demo.latest[5]), g_demo.ready ? Demo_CommandName(action) : g_demo.error,
-               (unsigned int)g_demo.latest[0], (unsigned int)g_demo.latest[1],
-               (unsigned int)g_demo.latest[2], (unsigned int)g_demo.latest[3],
-               (unsigned int)g_demo.latest[4], (unsigned int)g_demo.latest[5],
-               (unsigned int)g_demo.latest[6], (unsigned int)g_demo.latest[7],
-               (unsigned long)g_demo.total, (unsigned long)g_demo.window, (unsigned long)g_demo.errors);
-    } else Demo_Print("%s IDLE state=%s total=%lu err=%lu\r\n", side,
-                  g_demo.ready ? Demo_CommandName(action) : g_demo.error,
-                  (unsigned long)g_demo.total, (unsigned long)g_demo.errors);
+    const char *line = g_status_provider ? g_status_provider() : NULL;
+    const char *error = g_error_provider ? g_error_provider() : NULL;
+    u8 connected = (u8)(g_demo.ready && g_config.configured && g_demo.have_latest &&
+                         (u32)(Demo_Now() - g_demo.last_valid) < DEMO_RX_TIMEOUT && !error);
+    if(line) Demo_Print("%s", line);
+    /* Known limitation, intentionally deferred: idle TX sends no heartbeat.
+     * This is recent valid-packet status, NOT proof of a bidirectional link.
+     * Idle and powered-off transmitters both become NOT CONNECT after 85ms. */
+    Demo_Print("%s", connected ? "wu-xian connect ing\r\n" : "wu-xian not connect\r\n");
+    if(!g_demo.ready) Demo_Print("ERR RADIO %s\r\n", g_demo.error);
+    if(error) Demo_Print("ERR EXEC %s\r\n", error);
     g_demo.window = 0U;
 }
 void WirelessDemo_Init(void)
@@ -455,13 +440,16 @@ void WirelessDemo_Init(void)
     memset(&g_demo, 0, sizeof(g_demo)); g_uart_head = g_uart_tail = 0U; g_uart_fault = 0U;
     g_uart_tx_head = g_uart_tx_tail = 0U;
     g_maintenance_hook = NULL; g_retry_allowed = 1U;
+    g_status_provider = NULL; g_error_provider = NULL;
     systick_config(); usart_init(115200U); Demo_TimerInit();
     Demo_ConfigLoad();
     g_demo.error = g_demo.storage_ok ? "UNPAIRED" : "FLASH_OVERLAP";
     usart_interrupt_enable(BSP_USART, USART_INT_RBNE); nvic_irq_enable(USART1_IRQn, 1U);
-    Demo_Print("\r\nRECEIVER V3 RX221 PROTO=A2 UART=115200 8N1 ESTOP=08\r\n");
+    Demo_Print("\r\nRECEIVER V3 RX221 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04\r\n");
     if(g_config.configured && g_demo.storage_ok) (void)Demo_RadioInit();
-    Demo_ShowConfig(); g_demo.report_at = Demo_Now();
+    Demo_ShowConfig();
+    Demo_Print("INIT %s\r\n", g_demo.ready ? "OK" : g_demo.error);
+    g_demo.report_at = Demo_Now();
 }
 void WirelessDemo_Process(void)
 {
@@ -475,8 +463,17 @@ void WirelessDemo_Process(void)
             Demo_RxProcess();
         }
     }
-    now = Demo_Now();
-    if((u32)(now - g_demo.report_at) >= DEMO_PRINT_TICKS) { g_demo.report_at = now; Demo_Report(); }
+    /* The integrated coordinator reports AFTER syncing the fresh command and
+     * applying execution outputs, so the 1000ms snapshot is not one loop old. */
+}
+
+void WirelessDemo_ReportProcess(void)
+{
+    u32 now = Demo_Now();
+    if((u32)(now - g_demo.report_at) >= DEMO_PRINT_TICKS) {
+        g_demo.report_at = now;
+        Demo_Report();
+    }
 }
 
 uint8_t WirelessDemo_GetCommand(void)
@@ -489,3 +486,9 @@ uint8_t WirelessDemo_GetCommand(void)
 
 void WirelessDemo_SetRetryAllowed(uint8_t allowed) { g_retry_allowed = (u8)(allowed != 0U); }
 void WirelessDemo_SetMaintenanceHook(void (*hook)(uint8_t active)) { g_maintenance_hook = hook; }
+
+void WirelessDemo_SetStatusProvider(const char *(*status)(void), const char *(*error)(void))
+{
+    g_status_provider = status;
+    g_error_provider = error;
+}

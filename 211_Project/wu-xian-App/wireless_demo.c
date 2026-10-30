@@ -27,7 +27,7 @@
 #define DEMO_RX_TIMEOUT 850U /* 85 ms from latest valid control packet */
 #define DEMO_TX_TIMEOUT 700U
 #define DEMO_RETRY_TICKS 10000U
-#define DEMO_PRINT_TICKS 3000U
+#define DEMO_PRINT_TICKS 10000U /* 1000ms, TIMER2=10kHz */
 #if WIRELESS_DEMO_TX
 #define DEMO_TAG WIRELESS_CONTROL_TAG
 #else
@@ -234,10 +234,8 @@ static BOOL Demo_ConfigSave(const Demo_Config *config)
 
 static void Demo_SetAction(u8 action, const char *reason)
 {
-    if(action != g_demo.action) {
-        g_demo.action = action;
-        Demo_Print("EVENT %s %s\r\n", action ? "RUN" : "STOP", reason);
-    }
+    (void)reason;
+    g_demo.action = action;
 }
 static BOOL Demo_Fail(const char *reason)
 {
@@ -323,23 +321,9 @@ static u32 Demo_Random(void)
     x ^= x << 13; x ^= x >> 17; x ^= x << 5;
     g_demo.random = x; return x;
 }
-static const char *Demo_CommandName(u8 command)
-{
-    switch(command) {
-    case WIRELESS_CMD_STOP: return "STOP";
-    case WIRELESS_CMD_UP: return "UP";
-    case WIRELESS_CMD_DOWN: return "DOWN";
-    case WIRELESS_CMD_UP_FAST: return "UP_FAST";
-    case WIRELESS_CMD_DOWN_FAST: return "DOWN_FAST";
-    case WIRELESS_CMD_ESTOP: return "ESTOP";
-    default: return "INVALID";
-    }
-}
 static void Demo_ButtonProcess(void)
 {
-    u8 raw = 0U, i, command, previous_bits = g_demo.button_bits;
-    u8 previous_conflict = g_demo.button_conflict;
-    u8 previous_estop = g_demo.estop_pressed;
+    u8 raw = 0U, i, command;
     u16 pa = gpio_input_port_get(GPIOA), pb = gpio_input_port_get(GPIOB);
     u32 now = Demo_Now();
     u8 estop = (u8)((pa & GPIO_PIN_8) == 0U);
@@ -380,18 +364,10 @@ static void Demo_ButtonProcess(void)
 
     command = (u8)(g_demo.button_bits & (WIRELESS_CMD_UP | WIRELESS_CMD_DOWN));
     if(g_demo.button_conflict || command == (WIRELESS_CMD_UP | WIRELESS_CMD_DOWN))
-        command = WIRELESS_CMD_STOP;
-    else if(command && (g_demo.button_bits & WIRELESS_CMD_FAST)) command |= WIRELESS_CMD_FAST;
+        command = WIRELESS_CMD_CONFLICT;
+    else if(g_demo.button_bits & WIRELESS_CMD_FAST) command |= WIRELESS_CMD_FAST;
     if(g_demo.estop_pressed) command = WIRELESS_CMD_ESTOP;
 
-    if(previous_bits != g_demo.button_bits || previous_conflict != g_demo.button_conflict ||
-       previous_estop != g_demo.estop_pressed) {
-        Demo_Print("KEY up=%u down=%u fast=%u conflict=%u estop=%u cmd=%s\r\n",
-                   (unsigned)!!(g_demo.button_bits & WIRELESS_CMD_UP),
-                   (unsigned)!!(g_demo.button_bits & WIRELESS_CMD_DOWN),
-                   (unsigned)!!(g_demo.button_bits & WIRELESS_CMD_FAST),
-                   (unsigned)g_demo.button_conflict, (unsigned)g_demo.estop_pressed, Demo_CommandName(command));
-    }
     if(command != g_demo.button_command) {
         g_demo.button_command = command;
         /* Any command change preempts an old direction/speed packet. */
@@ -463,7 +439,7 @@ static void Demo_RxProcess(void)
 static void Demo_ShowConfig(void)
 {
     u32 frequency = 433920U + 150U * g_config.channel;
-    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=%02X ESTOP=08\r\n",
+    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=%02X ESTOP=08 STATUS=03/04\r\n",
            (unsigned long)g_config.id, (unsigned long)g_config.channel,
            (unsigned long)(frequency / 1000U), (unsigned long)(frequency % 1000U),
            (unsigned long)g_config.configured, g_demo.storage_ok ? "OK" : "OVERLAP",
@@ -549,35 +525,25 @@ static void Demo_UartProcess(void)
         }
     }
 }
+/* Snapshot only: never log key edges or individual packets. Idle has no
+ * heartbeat by user policy; reporting must not change RF scheduling. */
 static void Demo_Report(void)
 {
-#if WIRELESS_DEMO_TX
-    const char *side = "TX";
-    u8 action = g_demo.button_command;
-#else
-    const char *side = "RX";
-    u8 action = g_demo.action;
-#endif
-    if(g_demo.window && g_demo.have_latest) {
-        Demo_Print("%s seq=%u cmd=%s state=%s data=%02X %02X %02X %02X %02X %02X %02X %02X total=%lu new=%lu err=%lu\r\n",
-               side, (unsigned int)(((u16)g_demo.latest[6] << 8) | g_demo.latest[7]),
-#if WIRELESS_DEMO_TX
-               Demo_CommandName(g_demo.latest[5]), g_demo.ready ? Demo_CommandName(action) : g_demo.error,
-#else
-               g_demo.latest[5] ? "RUN" : "STOP", action ? "RUN" : "STOP",
-#endif
-               (unsigned int)g_demo.latest[0], (unsigned int)g_demo.latest[1],
-               (unsigned int)g_demo.latest[2], (unsigned int)g_demo.latest[3],
-               (unsigned int)g_demo.latest[4], (unsigned int)g_demo.latest[5],
-               (unsigned int)g_demo.latest[6], (unsigned int)g_demo.latest[7],
-               (unsigned long)g_demo.total, (unsigned long)g_demo.window, (unsigned long)g_demo.errors);
-    } else Demo_Print("%s IDLE state=%s total=%lu err=%lu\r\n", side,
-#if WIRELESS_DEMO_TX
-                  g_demo.ready ? Demo_CommandName(action) : g_demo.error,
-#else
-                  g_demo.ready ? (action ? "RUN" : "STOP") : g_demo.error,
-#endif
-                  (unsigned long)g_demo.total, (unsigned long)g_demo.errors);
+    const char *line;
+    switch(g_demo.button_command) {
+    case WIRELESS_CMD_UP: line = "up\r\n"; break;
+    case WIRELESS_CMD_DOWN: line = "dowm\r\n"; break;
+    case WIRELESS_CMD_UP_FAST: line = "fast up\r\n"; break;
+    case WIRELESS_CMD_DOWN_FAST: line = "fast dowm\r\n"; break;
+    case WIRELESS_CMD_FAST: line = "wu-xian fast\r\n"; break;
+    case WIRELESS_CMD_CONFLICT: line = "error model\r\n"; break;
+    case WIRELESS_CMD_ESTOP: line = "stop model\r\n"; break;
+    default: line = "sleep model\r\n"; break;
+    }
+    Demo_Print("%s", line);
+    if(!g_demo.ready) {
+        Demo_Print("ERR RADIO %s\r\n", g_demo.error);
+    }
     g_demo.window = 0U;
 }
 void WirelessDemo_Init(void)
@@ -600,12 +566,14 @@ void WirelessDemo_Init(void)
     g_demo.error = g_demo.storage_ok ? "UNPAIRED" : "FLASH_OVERLAP";
     usart_interrupt_enable(BSP_USART, USART_INT_RBNE); nvic_irq_enable(USART1_IRQn, 1U);
 #if WIRELESS_DEMO_TX
-    Demo_Print("\r\nWIRELESS V3 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08\r\n");
+    Demo_Print("\r\nWIRELESS V3 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04\r\n");
 #else
     Demo_Print("\r\nWIRELESS V2 RX221 UART=115200 8N1\r\n");
 #endif
     if(g_config.configured && g_demo.storage_ok) (void)Demo_RadioInit();
-    Demo_ShowConfig(); g_demo.report_at = Demo_Now();
+    Demo_ShowConfig();
+    Demo_Print("INIT %s\r\n", g_demo.ready ? "OK" : g_demo.error);
+    g_demo.report_at = Demo_Now();
 }
 void WirelessDemo_Process(void)
 {

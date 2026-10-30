@@ -1,9 +1,9 @@
 {
   "errors": 0,
   "warnings": 0,
-  "program_size": "Program Size: Code=16856 RO-data=1012 RW-data=4 ZI-data=1876",
-  "hex_end_exclusive": "0x80045d8",
-  "hex_sha256": "2dce8ce93ac83f772df62ae2b8fd8506243a10398299e56e2f0878b2993b3e7c",
+  "program_size": "Program Size: Code=16388 RO-data=888 RW-data=4 ZI-data=1876",
+  "hex_end_exclusive": "0x8004388",
+  "hex_sha256": "78884dcac13a5bdff614e67b3d257a1bbb34d26298174284d7eb63971bf9615b",
   "protected_files": 101,
   "hardware_tested": false,
   "protocol": "A2",
@@ -11,10 +11,15 @@
     "STOP": 0,
     "UP": 1,
     "DOWN": 2,
+    "CONFLICT": 3,
+    "FAST_ONLY": 4,
     "UP_FAST": 5,
     "DOWN_FAST": 6,
     "ESTOP": 8
   },
+  "status_log_period_ms": 1000,
+  "idle_heartbeat": false,
+  "status_only_never_drives_motor": true,
   "estop_pin": "PA8 active-low",
   "debounce_ms": 10,
   "tests": [
@@ -22,8 +27,8 @@
   ],
   "sources": {
     "main_example.c": "5e84ee5b2a3e13ba80a4881660c1a29cf7354878bb0affe54d4429cd03ebfd4d",
-    "wireless_demo.c": "ddce01b1fba3c41e92d518e2335c27dee12316f8b15ac9b3a810eaaddb01e93f",
-    "wireless_demo.h": "91e08395e7b84d365ed818139e867ec2985f3eb6861f889d3a0adbb0222ebd30",
+    "wireless_demo.c": "a961bf25f9ea2e13efbf82484123d0157355b0a944d7a3d87e039811b2c5c9b3",
+    "wireless_demo.h": "e316a839b0ba0635c0e2929fe39dbc7dc9eacfbbf7495dbf21860c3c65dd5e2f",
     "wireless_demo_params.h": "1047d181cb81401214b425bd7bc32b5c1da2702cc38bd2b97552617f8acd3895"
   }
 }

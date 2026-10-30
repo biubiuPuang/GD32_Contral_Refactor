@@ -9,7 +9,7 @@
 #define WIRED_KM_OFF_MS             50U
 #define WIRED_RELAY_RELEASE_MS      30U
 #define WIRED_RELAY_PREPARE_MS      30U
-#define WIRED_REPORT_MS             500U
+#define WIRED_REPORT_MS             1000U
 #define WIRED_RF_SETTLE_MS          20U /* Initial relay-path settling value. */
 
 #endif

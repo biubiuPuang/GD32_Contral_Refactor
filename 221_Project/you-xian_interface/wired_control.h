@@ -67,6 +67,10 @@ void WiredControl_SetRemoteEmergencyStop(uint8_t active);
  * completes existing relay release, then waits for direction-path settling.
  */
 void WiredControl_SetRemoteCommand(uint8_t command);
+/* Status-only RF 03/04 are recorded for logging, mapped to STOP for execution.
+ * NULL status during relay transitions. No physical E-stop/limit GPIO exists. */
+const char *WiredControl_StatusLine(void);
+const char *WiredControl_Error(void);
 uint8_t WiredControl_RadioRetryAllowed(void);
 /* Main-context logging sink: returns 1 when a complete line was queued.
  * NULL selects the original wired-only polled UART transmitter. */
