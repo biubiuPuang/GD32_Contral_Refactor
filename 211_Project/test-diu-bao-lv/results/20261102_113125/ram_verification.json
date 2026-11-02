@@ -1,0 +1,15 @@
+{
+  "source": "independent read-only RX RAM audit after STOP; two matching reads",
+  "session": 216,
+  "counter_unique": 10000,
+  "target": 10000,
+  "highest_sequence": 10000,
+  "bitmap_set_bits": 10000,
+  "duplicates": 0,
+  "out_of_order": 0,
+  "missing_sequences": [],
+  "object_guard_ok": true,
+  "stack_guard_ok": true,
+  "bitmap_sha256": "d5e45720729e32d96589a7956dd104f1a71ba3fd3b97d0910a43f57316ad1690",
+  "matches_serial_result": true
+}

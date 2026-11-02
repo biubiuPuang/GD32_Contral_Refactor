@@ -1,0 +1,84 @@
+{
+  "time": "2026-11-02T11:40:42.305158+08:00",
+  "boards": {
+    "TX": {
+      "GET": {
+        "ROLE": "TX",
+        "ID": "1",
+        "CH": "0",
+        "FREQ_KHZ": "433920",
+        "RATE": "9600",
+        "TAG": "B7",
+        "RADIO": "OK",
+        "SAFE": "0"
+      },
+      "STAT": {
+        "ROLE": "TX",
+        "SESSION": "216",
+        "STATE": "4",
+        "TARGET": "10000",
+        "ATTEMPT": "10000",
+        "SENT": "10000",
+        "TXFAIL": "0",
+        "RX": "0",
+        "DUP": "0",
+        "OOO": "0",
+        "BAD": "0",
+        "CRCERR": "0",
+        "HWERR": "0",
+        "GAP85": "0",
+        "MAXGAP_TICKS": "0",
+        "LOGDROP": "0",
+        "UARTERR": "0",
+        "ELAPSED_MS": "528660",
+        "SAFE": "0"
+      },
+      "AUDIT": {
+        "RX": "0",
+        "BITS": "0",
+        "MATCH": "1",
+        "GUARD": "1"
+      }
+    },
+    "RX": {
+      "GET": {
+        "ROLE": "RX",
+        "ID": "1",
+        "CH": "0",
+        "FREQ_KHZ": "433920",
+        "RATE": "9600",
+        "TAG": "B7",
+        "RADIO": "OK",
+        "SAFE": "1"
+      },
+      "STAT": {
+        "ROLE": "RX",
+        "SESSION": "216",
+        "STATE": "4",
+        "TARGET": "10000",
+        "ATTEMPT": "0",
+        "SENT": "0",
+        "TXFAIL": "0",
+        "RX": "10000",
+        "DUP": "0",
+        "OOO": "0",
+        "BAD": "0",
+        "CRCERR": "0",
+        "HWERR": "0",
+        "GAP85": "0",
+        "MAXGAP_TICKS": "637",
+        "LOGDROP": "0",
+        "UARTERR": "0",
+        "ELAPSED_MS": "530460",
+        "SAFE": "1"
+      },
+      "AUDIT": {
+        "RX": "10000",
+        "BITS": "10000",
+        "MATCH": "1",
+        "GUARD": "1"
+      }
+    }
+  },
+  "ports_closed": true
+}

@@ -1,0 +1,21 @@
+{"time": "2026-11-02T10:57:10.835838+08:00", "role": "TX", "direction": "host_to_board", "line": "GET"}
+{"time": "2026-11-02T10:57:10.848862+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT INFO ROLE=TX ID=1 CH=0 FREQ_KHZ=433920 RATE=9600 TAG=B7 RADIO=OK SAFE=0"}
+{"time": "2026-11-02T10:57:10.888142+08:00", "role": "RX", "direction": "host_to_board", "line": "GET"}
+{"time": "2026-11-02T10:57:10.899529+08:00", "role": "RX", "direction": "board_to_host", "line": "PLT INFO ROLE=RX ID=1 CH=0 FREQ_KHZ=433920 RATE=9600 TAG=B7 RADIO=OK SAFE=1"}
+{"time": "2026-11-02T10:57:10.938752+08:00", "role": "TX", "direction": "host_to_board", "line": "STOP"}
+{"time": "2026-11-02T10:57:10.944542+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT STOPPED"}
+{"time": "2026-11-02T10:57:10.961596+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT STAT ROLE=TX SESSION=0 STATE=4 TARGET=0 ATTEMPT=0 SENT=0 TXFAIL=0 RX=0 DUP=0 OOO=0 BAD=0 CRCERR=0 HWERR=0 GAP85=0 MAXGAP_TICKS=0 LOGDROP=0 UARTERR=0 ELAPSED_MS=10726 SAFE=0"}
+{"time": "2026-11-02T10:57:10.989979+08:00", "role": "RX", "direction": "host_to_board", "line": "STOP"}
+{"time": "2026-11-02T10:57:10.995679+08:00", "role": "RX", "direction": "board_to_host", "line": "PLT STOPPED"}
+{"time": "2026-11-02T10:57:11.012276+08:00", "role": "RX", "direction": "board_to_host", "line": "PLT STAT ROLE=RX SESSION=0 STATE=4 TARGET=0 ATTEMPT=0 SENT=0 TXFAIL=0 RX=0 DUP=0 OOO=0 BAD=0 CRCERR=0 HWERR=0 GAP85=0 MAXGAP_TICKS=0 LOGDROP=0 UARTERR=0 ELAPSED_MS=3127 SAFE=1"}
+{"time": "2026-11-02T10:57:11.045466+08:00", "role": "RX", "direction": "host_to_board", "line": "ARM,209,100"}
+{"time": "2026-11-02T10:57:11.079811+08:00", "role": "RX", "direction": "board_to_host", "line": "PLT ARMED SESSION=209 TARGET=100"}
+{"time": "2026-11-02T10:57:11.096444+08:00", "role": "TX", "direction": "host_to_board", "line": "ARM,209,100"}
+{"time": "2026-11-02T10:57:11.107892+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT ARMED SESSION=209 TARGET=100"}
+{"time": "2026-11-02T10:57:11.151281+08:00", "role": "TX", "direction": "host_to_board", "line": "RUN"}
+{"time": "2026-11-02T10:57:11.168519+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT RUNNING SESSION=209"}
+{"time": "2026-11-02T10:57:11.361485+08:00", "role": "TX", "direction": "host_to_board", "line": "STAT"}
+{"time": "2026-11-02T10:57:15.363590+08:00", "role": "TX", "direction": "host_to_board", "line": "STOP"}
+{"time": "2026-11-02T10:57:16.521170+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT DONE SESSION=209"}
+{"time": "2026-11-02T10:57:16.537545+08:00", "role": "TX", "direction": "board_to_host", "line": "PLT STAT ROLE=TX SESSION=209 STATE=3 TARGET=100 ATTEMPT=100 SENT=100 TXFAIL=0 RX=0 DUP=0 OOO=0 BAD=0 CRCERR=0 HWERR=0 GAP85=0 MAXGAP_TICKS=0 LOGDROP=0 UARTERR=3 ELAPSED_MS=5347 SAFE=0"}
+{"time": "2026-11-02T10:57:19.413228+08:00", "role": "RX", "direction": "host_to_board", "line": "STOP"}

@@ -1,0 +1,9 @@
+{
+  "side": "221",
+  "probe": "CBD275220040B56D01173002",
+  "target": "gd32e230c8",
+  "role_marker": "RECEIVER V3 RX221",
+  "bytes": 65536,
+  "sha256": "3b8866e00eba4f0c8248dc43e82dcc160ef110eeca2df7c2078febb011408da6",
+  "pairing_sha256": "f923988ec5cc5a8583ac964e967d782fabeefa3fa8503fffa590e9f519819a78"
+}

@@ -1,0 +1,19 @@
+{
+  "protected_files": 143,
+  "builds": {
+    "211": {
+      "errors": 0,
+      "warnings": 0,
+      "image_end": "0x8003f98",
+      "size": "Program Size: Code=15322 RO-data=950 RW-data=4 ZI-data=5212  \r",
+      "hex_sha256": "cb7a8b2eefed0379843dd5e8d5078fdd5ec627bd913a07f3472a561bf39ad08c"
+    },
+    "221": {
+      "errors": 0,
+      "warnings": 0,
+      "image_end": "0x8004108",
+      "size": "Program Size: Code=15830 RO-data=806 RW-data=4 ZI-data=5212  \r",
+      "hex_sha256": "b5a0167c7e51adce9bede3eb0f574fa42e461c5f05de26d7326483876042995b"
+    }
+  }
+}

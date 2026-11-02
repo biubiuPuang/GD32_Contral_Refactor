@@ -1,0 +1,9 @@
+{
+  "side": "211",
+  "probe": "68004200040000515953574E",
+  "target": "gd32e230c8",
+  "role_marker": "WIRELESS V3 TX211",
+  "bytes": 65536,
+  "sha256": "25cf1f61abc712695d7fa3abcbb84ab8b37f9489f8073b08e00b4060f7976315",
+  "pairing_sha256": "f923988ec5cc5a8583ac964e967d782fabeefa3fa8503fffa590e9f519819a78"
+}

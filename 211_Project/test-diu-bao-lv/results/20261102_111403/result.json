@@ -1,0 +1,143 @@
+{
+  "started_at": "2026-11-02T11:14:03.352849+08:00",
+  "requested": 100,
+  "tx_port": "COM2",
+  "rx_port": "COM18",
+  "valid": true,
+  "scope": "one physical pair, current placement; not 50-pair concurrency or range qualification",
+  "info": {
+    "TX": {
+      "ROLE": "TX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "0"
+    },
+    "RX": {
+      "ROLE": "RX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "1"
+    }
+  },
+  "session": 4,
+  "memory_audits": {
+    "TX": {
+      "RX": "0",
+      "BITS": "0",
+      "MATCH": "1",
+      "GUARD": "1"
+    },
+    "RX": {
+      "RX": "100",
+      "BITS": "100",
+      "MATCH": "1",
+      "GUARD": "1"
+    }
+  },
+  "final": {
+    "TX": {
+      "ROLE": "TX",
+      "SESSION": "4",
+      "STATE": "3",
+      "TARGET": "100",
+      "ATTEMPT": "100",
+      "SENT": "100",
+      "TXFAIL": "0",
+      "RX": "0",
+      "DUP": "0",
+      "OOO": "0",
+      "BAD": "0",
+      "CRCERR": "0",
+      "HWERR": "0",
+      "GAP85": "0",
+      "MAXGAP_TICKS": "0",
+      "LOGDROP": "0",
+      "UARTERR": "0",
+      "ELAPSED_MS": "5237",
+      "SAFE": "0"
+    },
+    "RX": {
+      "ROLE": "RX",
+      "SESSION": "4",
+      "STATE": "1",
+      "TARGET": "100",
+      "ATTEMPT": "0",
+      "SENT": "0",
+      "TXFAIL": "0",
+      "RX": "100",
+      "DUP": "0",
+      "OOO": "0",
+      "BAD": "0",
+      "CRCERR": "0",
+      "HWERR": "0",
+      "GAP85": "0",
+      "MAXGAP_TICKS": "630",
+      "LOGDROP": "0",
+      "UARTERR": "0",
+      "ELAPSED_MS": "5985",
+      "SAFE": "1"
+    }
+  },
+  "progress": [
+    {
+      "time": "2026-11-02T11:14:04.099182+08:00",
+      "TX": {
+        "ROLE": "TX",
+        "SESSION": "4",
+        "STATE": "2",
+        "TARGET": "100",
+        "ATTEMPT": "4",
+        "SENT": "4",
+        "TXFAIL": "0",
+        "RX": "0",
+        "DUP": "0",
+        "OOO": "0",
+        "BAD": "0",
+        "CRCERR": "0",
+        "HWERR": "0",
+        "GAP85": "0",
+        "MAXGAP_TICKS": "0",
+        "LOGDROP": "0",
+        "UARTERR": "0",
+        "ELAPSED_MS": "204",
+        "SAFE": "0"
+      },
+      "RX": {
+        "ROLE": "RX",
+        "SESSION": "4",
+        "STATE": "1",
+        "TARGET": "100",
+        "ATTEMPT": "0",
+        "SENT": "0",
+        "TXFAIL": "0",
+        "RX": "5",
+        "DUP": "0",
+        "OOO": "0",
+        "BAD": "0",
+        "CRCERR": "0",
+        "HWERR": "0",
+        "GAP85": "0",
+        "MAXGAP_TICKS": "574",
+        "LOGDROP": "0",
+        "UARTERR": "0",
+        "ELAPSED_MS": "360",
+        "SAFE": "1"
+      }
+    }
+  ],
+  "sent": 100,
+  "unique_received": 100,
+  "lost": 0,
+  "loss_percent": 0.0,
+  "max_receive_gap_ms": 63.0,
+  "receive_gaps_at_least_85ms": 0,
+  "finished_at": "2026-11-02T11:14:09.925191+08:00"
+}

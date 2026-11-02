@@ -1,0 +1,22 @@
+{
+  "211_Project/User/main.c": {
+    "backup": "211_Project/test-diu-bao-lv/backup/main.original.c",
+    "original_sha256": "3c3d2c4714f1fe78b88158633022d8a456aab94547d39ff174b325ca7fef8128",
+    "test_sha256": "15c3b8ad0ce291e35ffa9e8ee3ff2c7d988847d7b3f5f2ee5c56f9d4364c4af8"
+  },
+  "211_Project/Project/GD32E230C8T6.uvprojx": {
+    "backup": "211_Project/test-diu-bao-lv/backup/GD32E230C8T6.original.uvprojx",
+    "original_sha256": "d9f504670c3bc58fe803e725833ce2c0862ad03381ad74155563daa2b0da09a5",
+    "test_sha256": "430ed130d2692b754620e0bd14fcc4539e3e3b4573b505107c0031094ec6804c"
+  },
+  "221_Project/User/main.c": {
+    "backup": "221_Project/test-diu-bao-lv/backup/main.original.c",
+    "original_sha256": "1c7d07a0d0e7c55da704468a655bc7491be0565afe854034ffb04747c93311a2",
+    "test_sha256": "a5a580edba2210d550d3173edf1043e9c9d2fee5fa2f8a111387dda7f4eb2c58"
+  },
+  "221_Project/Project/GD32E230C8T6.uvprojx": {
+    "backup": "221_Project/test-diu-bao-lv/backup/GD32E230C8T6.original.uvprojx",
+    "original_sha256": "1c72117a257b73758e19acedf960d68fb744b91ada79ca3944d9f10440ab9752",
+    "test_sha256": "49aeb93de78a3c7fc12818a682d04a0d2e7184fb69dece041cf1749c26ccc6c3"
+  }
+}

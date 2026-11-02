@@ -1,0 +1,10 @@
+{
+  "observed_serial_unique": 9957,
+  "observed_serial_duplicates": 43,
+  "observed_bitmap_missing": 245,
+  "observed_bitmap_set_bits": 9755,
+  "original_stack_bytes": 1024,
+  "bitmap_tail_overwritten": true,
+  "valid": false,
+  "note": "Post-run read-only RX RAM inspection before corrected firmware was installed. Earlier 0.43 percent is invalid."
+}

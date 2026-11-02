@@ -1,0 +1,80 @@
+{
+  "TX": {
+    "info": {
+      "ROLE": "TX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "0"
+    },
+    "stats": {
+      "ROLE": "TX",
+      "SESSION": "253",
+      "STATE": "4",
+      "TARGET": "10000",
+      "ATTEMPT": "10000",
+      "SENT": "10000",
+      "TXFAIL": "0",
+      "RX": "0",
+      "DUP": "0",
+      "OOO": "0",
+      "BAD": "0",
+      "CRCERR": "0",
+      "HWERR": "0",
+      "GAP85": "0",
+      "MAXGAP_TICKS": "0",
+      "LOGDROP": "0",
+      "UARTERR": "0",
+      "ELAPSED_MS": "528437",
+      "SAFE": "0"
+    },
+    "audit": {
+      "RX": "0",
+      "BITS": "0",
+      "MATCH": "1",
+      "GUARD": "1"
+    }
+  },
+  "RX": {
+    "info": {
+      "ROLE": "RX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "1"
+    },
+    "stats": {
+      "ROLE": "RX",
+      "SESSION": "253",
+      "STATE": "4",
+      "TARGET": "10000",
+      "ATTEMPT": "0",
+      "SENT": "0",
+      "TXFAIL": "0",
+      "RX": "10000",
+      "DUP": "0",
+      "OOO": "0",
+      "BAD": "0",
+      "CRCERR": "0",
+      "HWERR": "0",
+      "GAP85": "0",
+      "MAXGAP_TICKS": "637",
+      "LOGDROP": "0",
+      "UARTERR": "0",
+      "ELAPSED_MS": "530260",
+      "SAFE": "1"
+    },
+    "audit": {
+      "RX": "10000",
+      "BITS": "10000",
+      "MATCH": "1",
+      "GUARD": "1"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "started_at": "2026-11-02T10:57:10.831519+08:00",
+  "requested": 100,
+  "tx_port": "COM2",
+  "rx_port": "COM18",
+  "valid": false,
+  "scope": "one physical pair, current placement; not 50-pair concurrency or range qualification",
+  "info": {
+    "TX": {
+      "ROLE": "TX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "0"
+    },
+    "RX": {
+      "ROLE": "RX",
+      "ID": "1",
+      "CH": "0",
+      "FREQ_KHZ": "433920",
+      "RATE": "9600",
+      "TAG": "B7",
+      "RADIO": "OK",
+      "SAFE": "1"
+    }
+  },
+  "session": 209,
+  "error": "TimeoutError: TX: no PLT STAT",
+  "cleanup_errors": [
+    "TX: TX: no PLT STOPPED",
+    "RX: RX: no PLT STOPPED"
+  ],
+  "finished_at": "2026-11-02T10:57:23.458733+08:00"
+}

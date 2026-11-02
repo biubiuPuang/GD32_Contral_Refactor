@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>GD32E230</Define>
               <Undefine></Undefine>
-              <IncludePath>..\User;..\Firmware\GD32E23x_standard_peripheral\Include;..\Firmware\CMSIS\GD\GD32E23x\Include;..\Firmware\CMSIS;..\Hardware;..\wu-xian_interface;..\wu-xian-App</IncludePath>
+              <IncludePath>..\User;..\Firmware\GD32E23x_standard_peripheral\Include;..\Firmware\CMSIS\GD\GD32E23x\Include;..\Firmware\CMSIS;..\Hardware;..\wu-xian_interface;..\wu-xian-App;..\test-diu-bao-lv</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -520,9 +520,9 @@
               <FilePath>..\Firmware\CMSIS\GD\GD32E23x\Source\system_gd32e23x.c</FilePath>
             </File>
             <File>
-              <FileName>startup_gd32e23x.s</FileName>
+              <FileName>startup_packet_loss.s</FileName>
               <FileType>2</FileType>
-              <FilePath>..\Firmware\CMSIS\GD\GD32E23x\Source\ARM\startup_gd32e23x.s</FilePath>
+              <FilePath>..\test-diu-bao-lv\startup_packet_loss.s</FilePath>
             </File>
           </Files>
         </Group>
@@ -576,7 +576,9 @@
               <FileName>wireless_demo.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\wu-xian-App\wireless_demo.c</FilePath>
-            </File>
+            <!-- 2026-11-2: retain original source; test main uses its own UART ISR. -->
+<FileOption><CommonProperty><IncludeInBuild>0</IncludeInBuild></CommonProperty></FileOption>
+</File>
             <File>
               <FileName>wireless_demo.h</FileName>
               <FileType>5</FileType>
@@ -592,7 +594,18 @@
         <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
-      </Groups>
+        <!-- 2026-11-2: automatic packet-loss test; original application group retained. -->
+      <Group>
+        <GroupName>test-diu-bao-lv</GroupName>
+        <Files>
+          <File><FileName>packet_loss_stats.h</FileName><FileType>5</FileType><FilePath>..\test-diu-bao-lv\packet_loss_stats.h</FilePath></File>
+          <File><FileName>packet_loss_stats.c</FileName><FileType>1</FileType><FilePath>..\test-diu-bao-lv\packet_loss_stats.c</FilePath></File>
+          <File><FileName>packet_loss_test.h</FileName><FileType>5</FileType><FilePath>..\test-diu-bao-lv\packet_loss_test.h</FilePath></File>
+          <File><FileName>packet_loss_test.c</FileName><FileType>1</FileType><FilePath>..\test-diu-bao-lv\packet_loss_test.c</FilePath></File>
+          <File><FileName>packet_loss_config.h</FileName><FileType>5</FileType><FilePath>..\test-diu-bao-lv\packet_loss_config.h</FilePath></File>
+        </Files>
+      </Group>
+    </Groups>
     </Target>
   </Targets>
 

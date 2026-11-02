@@ -1,0 +1,8 @@
+{
+  "side": "211",
+  "probe": "68004200040000515953574E",
+  "verified_image_bytes": 16280,
+  "image_sha256": "cb7a8b2eefed0379843dd5e8d5078fdd5ec627bd913a07f3472a561bf39ad08c",
+  "pairing_unchanged": true,
+  "erase": "sector"
+}
