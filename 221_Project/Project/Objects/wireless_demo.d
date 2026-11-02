@@ -34,4 +34,5 @@
   ..\wu-xian_interface\typedefs.h ..\wu-xian_interface\cmt2300a_defs.h \
   ..\wu-xian_interface\cmt2300a_hal.h ..\wu-xian_interface\cmt_port.h \
   ..\wu-xian-App\wireless_demo_params.h \
+  ..\wu-xian-App\wireless_frequency_plan.h \
   D:\_Keil5\ARM\ARMCLANG\include\stdarg.h

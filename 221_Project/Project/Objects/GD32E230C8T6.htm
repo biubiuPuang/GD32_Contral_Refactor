@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\GD32E230C8T6.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\GD32E230C8T6.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6210000: Last Updated: Fri Oct 30 15:45:43 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6210000: Last Updated: Mon Nov  2 18:02:31 2026
 <BR><P>
 <H3>Maximum Stack Usage =        440 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -854,7 +854,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReceiverApp_Process
 </UL>
 
-<P><STRONG><a name="[72]"></a>WirelessDemo_Init</STRONG> (Thumb, 576 bytes, Stack size 104 bytes, wireless_demo.o(.text.WirelessDemo_Init))
+<P><STRONG><a name="[72]"></a>WirelessDemo_Init</STRONG> (Thumb, 580 bytes, Stack size 104 bytes, wireless_demo.o(.text.WirelessDemo_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 360<LI>Call Chain = WirelessDemo_Init &rArr; Demo_Print &rArr; vsnprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
@@ -885,7 +885,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> receiver_app.o(.text.ReceiverApp_Init)
 </UL>
-<P><STRONG><a name="[7e]"></a>WirelessDemo_Process</STRONG> (Thumb, 2048 bytes, Stack size 168 bytes, wireless_demo.o(.text.WirelessDemo_Process))
+<P><STRONG><a name="[7e]"></a>WirelessDemo_Process</STRONG> (Thumb, 2064 bytes, Stack size 168 bytes, wireless_demo.o(.text.WirelessDemo_Process))
 <BR><BR>[Stack]<UL><LI>Max Depth = 424<LI>Call Chain = WirelessDemo_Process &rArr; Demo_Print &rArr; vsnprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fmc_flag_clear
@@ -1389,7 +1389,7 @@ Local Symbols
 <LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;WirelessDemo_Init
 </UL>
 
-<P><STRONG><a name="[6e]"></a>Demo_RadioInit</STRONG> (Thumb, 1556 bytes, Stack size 32 bytes, wireless_demo.o(.text.Demo_RadioInit))
+<P><STRONG><a name="[6e]"></a>Demo_RadioInit</STRONG> (Thumb, 1564 bytes, Stack size 32 bytes, wireless_demo.o(.text.Demo_RadioInit))
 <BR><BR>[Stack]<UL><LI>Max Depth = 244<LI>Call Chain = Demo_RadioInit &rArr; Demo_StartRx &rArr; CMT2300A_GoRx &rArr; CMT2300A_ReadPollingFlags &rArr; cmt_spi3_read &rArr; cmt_spi3_recv &rArr; CMT_PortDelayUs &rArr; delay_1us &rArr; __aeabi_ui2f &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Fail

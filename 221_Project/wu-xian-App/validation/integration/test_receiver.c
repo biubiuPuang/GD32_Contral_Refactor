@@ -338,7 +338,7 @@ static void test_faults_maintenance_and_uart(void)
     command("DEFAULT"); assert(!g_config.configured && !g_wired.output.allow);
     tick(150U); wired_up = 1U; tick(41U); expect_run(1U);
     /* Receiving serial junk does not change settings, motion or pair state. */
-    before = flash_writes; command("SET,0,0"); command("SET,1,6"); command("SET,-1,0");
+    before = flash_writes; command("SET,0,0"); command("SET,1,50"); command("SET,-1,0");
     command("SET,4294967296,0"); command("SET,1,0junk"); assert(flash_writes == before);
     for(unsigned i = 0U; i < 150U; ++i) uart_char('X');
     service(); uart_char('\n'); service(); command("GET"); expect_run(1U);
@@ -445,7 +445,7 @@ static void test_snapshot_logs_and_status_only(void)
 {
     static const u8 status_only[]={WIRELESS_CMD_FAST,WIRELESS_CMD_CONFLICT};
     reset(1);configure(1U,0U);reset(0);
-    assert(strstr(output,"FREQ=433.920MHz") && strstr(output,"INIT OK\r\n"));
+    assert(strstr(output,"FREQ=433.1250MHz") && strstr(output,"INIT OK\r\n"));
     clear_output();tick(999U);assert(!output_length);
     tick(1U);assert(!strcmp(output,"sleep model\r\nwu-xian not connect\r\n"));
     /* STOP is also a valid fresh link packet, not just nonzero motion. */
@@ -532,8 +532,39 @@ static void test_storage_and_rollover(void)
     tick(110U); wired_up = 1U; tick(41U); expect_run(1U);
 }
 
+static void test_fifty_channels(void)
+{
+    static const u8 expected_bank[8] = {0x42,0x78,0xD9,0x1A,0x42,0x62,0x27,0x1A};
+    char expected[48];
+    unsigned writes;
+    reset(1);
+    for(u32 ch=0U;ch<50U;++ch) {
+        u32 hz=433125000UL+32500UL*ch;
+        configure(1000U+ch,ch);
+        reset(0);
+        assert(g_demo.ready && g_config.id==1000U+ch && g_config.channel==ch);
+        assert(!memcmp(registers+0x18,expected_bank,sizeof(expected_bank)));
+        assert(registers[0x63]==ch && registers[0x64]==13U && registers[0x27]==21U);
+        command("GET");
+        snprintf(expected,sizeof(expected),"FREQ=%lu.%04luMHz",(unsigned long)(hz/1000000U),
+                 (unsigned long)((hz%1000000U)/100U));
+        assert(strstr(output,expected));
+        valid(WIRELESS_CMD_STOP);
+        inject(2000U+ch,WIRELESS_CMD_UP,WIRELESS_CONTROL_TAG,
+               CMT2300A_MASK_PKT_OK_FLG|CMT2300A_MASK_CRC_OK_FLG);
+        assert(WirelessDemo_GetCommand()==WIRELESS_CMD_STOP);
+        valid(WIRELESS_CMD_UP);assert(WirelessDemo_GetCommand()==WIRELESS_CMD_UP);
+        tick(85U);assert(WirelessDemo_GetCommand()==WIRELESS_CMD_STOP);
+    }
+    writes=flash_writes;
+    command("SET,2000,50");command("SET,2000,4294967295");command("SET,2000,-1");
+    assert(flash_writes==writes && g_config.id==1049U && g_config.channel==49U);
+    command("HELP");assert(strstr(output,"<CH:0..49>"));
+}
+
 int main(void)
 {
+    test_fifty_channels();
     test_wired_and_radio_absence(); test_motion_and_stops(); test_timeout_filter_and_feedback();
     test_faults_maintenance_and_uart(); test_wireless_estop(); test_storage_and_rollover();
     test_snapshot_logs_and_status_only();

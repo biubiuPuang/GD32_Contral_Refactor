@@ -173,25 +173,49 @@ static void check_configuration(void)
     configure(0x12345678U,5U);
     assert(g_config.configured && g_config.id==0x12345678U && g_config.channel==5U && g_demo.ready);
     assert(registers[0x48]==0x78 && registers[0x49]==0x56 && registers[0x4A]==0x34 && registers[0x4B]==0x12);
-    assert(registers[0x46]==7 && registers[0x47]==0x0D && registers[0x63]==5 && registers[0x64]==60);
+    assert(registers[0x46]==7 && registers[0x47]==0x0D && registers[0x63]==5 && registers[0x64]==13);
 #if !WIRELESS_DEMO_TX
     assert(registers[0x27]==21);
 #endif
     before=flash_writes;configure(0x12345678U,5U);assert(flash_writes==before);
     reset(0);assert(g_config.id==0x12345678U && g_config.channel==5 && g_demo.ready);
-    command("GET");assert(strstr(output,"FREQ=434.670MHz PAIRED=1"));
+    command("GET");assert(strstr(output,"FREQ=433.2875MHz PAIRED=1"));
     command("DEFAULT");assert(!g_config.configured && !g_demo.ready);
     reset(0);assert(!g_config.configured && !g_demo.ready);
     configure(UINT32_MAX,0);assert(g_config.id==UINT32_MAX && g_demo.ready);
     for(u32 id=1;id<=100;++id){configure(id,id%6);assert(g_config.id==id && g_config.channel==id%6);}
     assert(flash_erases>=2);
     before=flash_writes;
-    command("SET,0,0");command("SET,1,6");command("SET,4294967296,0");
+    command("SET,0,0");command("SET,1,50");command("SET,4294967296,0");
     command("SET,-1,0");command("SET,1,0junk");command("SET,,0");command("SET,1,");
     assert(flash_writes==before && g_config.id==100);
     stby_fail=1;configure(200,1);assert(g_config.id==100 && flash_writes==before);stby_fail=0;
     reset(1);image_limit=DEMO_FLASH_FIRST+1;WirelessDemo_Init();configure(1,0);
     assert(!g_demo.storage_ok && !flash_writes && !g_demo.ready);
+}
+static void check_fifty_channels(void)
+{
+    static const u8 expected_bank[8] = {0x42,0x78,0xD9,0x1A,0x42,0x62,0x27,0x1A};
+    char expected[48];
+    unsigned writes;
+    reset(1);
+    for(u32 ch=0;ch<50U;++ch) {
+        u32 hz=433125000UL+32500UL*ch;
+        configure(1000U+ch,ch);
+        assert(g_demo.ready && g_config.id==1000U+ch && g_config.channel==ch);
+        assert(!memcmp(registers+0x18,expected_bank,sizeof(expected_bank)));
+        assert(registers[0x63]==ch && registers[0x64]==13U);
+        reset(0);
+        assert(g_demo.ready && g_config.id==1000U+ch && g_config.channel==ch);
+        command("GET");
+        snprintf(expected,sizeof(expected),"FREQ=%lu.%04luMHz",(unsigned long)(hz/1000000U),
+                 (unsigned long)((hz%1000000U)/100U));
+        assert(strstr(output,expected));
+    }
+    writes=flash_writes;
+    command("SET,2000,50");command("SET,2000,4294967295");command("SET,2000,-1");
+    assert(flash_writes==writes && g_config.id==1049U && g_config.channel==49U);
+    command("HELP");assert(strstr(output,"<CH:0..49>"));
 }
 static void check_power_loss(void)
 {
@@ -388,7 +412,7 @@ static void expect_snapshot(u32 pressed, const char *expected)
 static void check_snapshot_logs(void)
 {
     reset(1);configure(1U,0U);reset(0);
-    assert(strstr(output,"FREQ=433.920MHz") && strstr(output,"INIT OK\r\n"));
+    assert(strstr(output,"FREQ=433.1250MHz") && strstr(output,"INIT OK\r\n"));
     clear_output();log_ticks(9999U);assert(!output_length);
     log_ticks(1U);assert(strcmp(output,"sleep model\r\n")==0);
     expect_snapshot(GPIO_PIN_3,"up\r\n");
@@ -497,7 +521,7 @@ static void check_receive(void)
 #endif
 int main(void)
 {
-    check_configuration();check_power_loss();check_uart_and_faults();
+    check_fifty_channels();check_configuration();check_power_loss();check_uart_and_faults();
 #if WIRELESS_DEMO_TX
     check_button();check_estop();check_snapshot_logs();
 #else

@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\GD32E230C8T6.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\GD32E230C8T6.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6210000: Last Updated: Fri Oct 30 15:42:59 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6210000: Last Updated: Mon Nov  2 17:54:51 2026
 <BR><P>
 <H3>Maximum Stack Usage =        432 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -406,6 +406,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[49]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_WriteReg
 </UL>
 <BR>[Called By]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_LoadBank
+<LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_RadioInit
 </UL>
 
 <P><STRONG><a name="[4c]"></a>CMT2300A_EnableFifoMerge</STRONG> (Thumb, 34 bytes, Stack size 16 bytes, cmt2300a.o(.text.CMT2300A_EnableFifoMerge))
@@ -677,7 +678,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32e23x.o(RESET)
 </UL>
-<P><STRONG><a name="[71]"></a>WirelessDemo_Init</STRONG> (Thumb, 720 bytes, Stack size 112 bytes, wireless_demo.o(.text.WirelessDemo_Init))
+<P><STRONG><a name="[71]"></a>WirelessDemo_Init</STRONG> (Thumb, 724 bytes, Stack size 112 bytes, wireless_demo.o(.text.WirelessDemo_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 368<LI>Call Chain = WirelessDemo_Init &rArr; Demo_Print &rArr; vsnprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[7d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
@@ -687,7 +688,6 @@ Global Symbols
 <LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;usart_init
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;systick_config
-<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 <LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_RadioInit
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Print
 <LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Checksum
@@ -698,11 +698,12 @@ Global Symbols
 <LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_init
 <LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_struct_para_init
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_deinit
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[22]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[7e]"></a>WirelessDemo_Process</STRONG> (Thumb, 2788 bytes, Stack size 176 bytes, wireless_demo.o(.text.WirelessDemo_Process))
+<P><STRONG><a name="[7e]"></a>WirelessDemo_Process</STRONG> (Thumb, 2796 bytes, Stack size 176 bytes, wireless_demo.o(.text.WirelessDemo_Process))
 <BR><BR>[Stack]<UL><LI>Max Depth = 432<LI>Call Chain = WirelessDemo_Process &rArr; Demo_Print &rArr; vsnprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_input_port_get
@@ -711,7 +712,6 @@ Global Symbols
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fmc_page_erase
 <LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fmc_lock
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fmc_unlock
-<LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;memcmp
 <LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Fail
 <LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_RadioInit
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Print
@@ -724,6 +724,7 @@ Global Symbols
 <LI><a href="#[44]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_GoStby
 <LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_WriteFifo
 <LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_counter_read
+<LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;memcmp
 </UL>
 <BR>[Called By]<UL><LI><a href="#[22]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -1126,13 +1127,14 @@ Local Symbols
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;WirelessDemo_Init
 </UL>
 
-<P><STRONG><a name="[69]"></a>Demo_RadioInit</STRONG> (Thumb, 416 bytes, Stack size 24 bytes, wireless_demo.o(.text.Demo_RadioInit))
+<P><STRONG><a name="[69]"></a>Demo_RadioInit</STRONG> (Thumb, 584 bytes, Stack size 24 bytes, wireless_demo.o(.text.Demo_RadioInit))
 <BR><BR>[Stack]<UL><LI>Max Depth = 212<LI>Call Chain = Demo_RadioInit &rArr; CMT2119B_ConfigPolling &rArr; CMT2300A_ClearInterruptFlags &rArr; CMT2300A_ReadReg &rArr; cmt_spi3_read &rArr; cmt_spi3_recv &rArr; CMT_PortDelayUs &rArr; delay_1us &rArr; __aeabi_ui2f &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_Fail
 <LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Demo_LoadBank
 <LI><a href="#[3d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2119B_ConfigPolling
 <LI><a href="#[41]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2119B_Init
+<LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_ConfigRegBank
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_SetFrequencyStep
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_SetFrequencyChannel
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_ClearTxFifo
@@ -1148,7 +1150,7 @@ Local Symbols
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;WirelessDemo_Init
 </UL>
 
-<P><STRONG><a name="[65]"></a>Demo_LoadBank</STRONG> (Thumb, 116 bytes, Stack size 24 bytes, wireless_demo.o(.text.Demo_LoadBank))
+<P><STRONG><a name="[65]"></a>Demo_LoadBank</STRONG> (Thumb, 136 bytes, Stack size 24 bytes, wireless_demo.o(.text.Demo_LoadBank))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = Demo_LoadBank &rArr; CMT2300A_ReadReg &rArr; cmt_spi3_read &rArr; cmt_spi3_recv &rArr; CMT_PortDelayUs &rArr; delay_1us &rArr; __aeabi_ui2f &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CMT2300A_ConfigRegBank

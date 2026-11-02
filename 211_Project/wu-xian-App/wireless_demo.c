@@ -14,6 +14,7 @@
 #include "cmt2219b.h"
 #endif
 #include "wireless_demo_params.h"
+#include "wireless_frequency_plan.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -21,8 +22,6 @@
 #define DEMO_PAYLOAD_SIZE 8U
 #define DEMO_NODE_SIZE 4U
 #define DEMO_DATA_SIZE 4U
-#define DEMO_CHANNEL_COUNT 6U
-#define DEMO_CHANNEL_STEP 60U /* 150 kHz, hardware step unit 2.5 kHz */
 #define DEMO_DEBOUNCE_TICKS 100U /* 10 ms, both edges */
 #define DEMO_RX_TIMEOUT 850U /* 85 ms from latest valid control packet */
 #define DEMO_TX_TIMEOUT 700U
@@ -247,10 +246,13 @@ static BOOL Demo_Fail(const char *reason)
 static BOOL Demo_LoadBank(u8 address, u8 length)
 {
     u8 i;
-    if(!CMT2300A_ConfigRegBank(address, &g_demo_rf_registers[address], length))
+    const u8 *bank = &g_demo_rf_registers[address];
+    if(address == CMT2300A_CUS_RF1 && length == 8U)
+        bank = g_demo_frequency_registers;
+    if(!CMT2300A_ConfigRegBank(address, bank, length))
         return Demo_Fail("CONFIG_WRITE");
     for(i = 0U; i < length; ++i)
-        if(CMT2300A_ReadReg(address + i) != g_demo_rf_registers[address + i])
+        if(CMT2300A_ReadReg(address + i) != bank[i])
             return Demo_Fail("CONFIG_READBACK");
     return TRUE;
 }
@@ -291,12 +293,11 @@ static BOOL Demo_RadioInit(void)
        CMT2300A_ReadReg(CMT2300A_CUS_FREQ_CHNL) != g_config.channel)
         return Demo_Fail("CHANNEL_READBACK");
 #if !WIRELESS_DEMO_TX
-    /* AN1971: 26 MHz, TX/RX 40 ppm each, 433.920..434.670 MHz.
-     * All six channels need AFC_OVF_TH=21 (0x15); the original .exp value
-     * is 10. See validation/check_frequencies.py for the workbook formulas.
+    /* AN1971: 26 MHz, TX/RX 40 ppm each, all 50 F50 channels.
+     * Keep the worksheet-derived AFC value in the application profile.
      */
-    CMT2300A_WriteReg(CMT2300A_CUS_FSK4, 0x15U);
-    if(CMT2300A_ReadReg(CMT2300A_CUS_FSK4) != 0x15U) return Demo_Fail("AFC_READBACK");
+    CMT2300A_WriteReg(CMT2300A_CUS_FSK4, DEMO_AFC_OVF_TH);
+    if(CMT2300A_ReadReg(CMT2300A_CUS_FSK4) != DEMO_AFC_OVF_TH) return Demo_Fail("AFC_READBACK");
 #endif
     if(!CMT2300A_GoSleep()) return Demo_Fail("CONFIG_SLEEP");
     if(!CMT2300A_GoStby()) return Demo_Fail("CONFIG_STBY");
@@ -438,10 +439,10 @@ static void Demo_RxProcess(void)
 
 static void Demo_ShowConfig(void)
 {
-    u32 frequency = 433920U + 150U * g_config.channel;
-    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%03luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=%02X ESTOP=08 STATUS=03/04\r\n",
+    u32 frequency = DEMO_BASE_FREQUENCY_HZ + DEMO_CHANNEL_SPACING_HZ * g_config.channel;
+    Demo_Print("CFG ID=%lu CH=%lu FREQ=%lu.%04luMHz PAIRED=%lu SAVE=%s RADIO=%s LOGDROP=%lu PROTO=%02X ESTOP=08 STATUS=03/04\r\n",
            (unsigned long)g_config.id, (unsigned long)g_config.channel,
-           (unsigned long)(frequency / 1000U), (unsigned long)(frequency % 1000U),
+           (unsigned long)(frequency / 1000000U), (unsigned long)((frequency % 1000000U) / 100U),
            (unsigned long)g_config.configured, g_demo.storage_ok ? "OK" : "OVERLAP",
            g_demo.ready ? "OK" : g_demo.error, (unsigned long)g_demo.log_drops,
            (unsigned)DEMO_TAG);
@@ -464,7 +465,7 @@ static void Demo_Command(const u8 *line)
     const u8 *p;
     if(strcmp((const char *)line, "GET") == 0) { Demo_ShowConfig(); return; }
     if(strcmp((const char *)line, "HELP") == 0) {
-        Demo_Print("GET | SET,<ID:1..4294967295>,<CH:0..5> | DEFAULT | HELP\r\n"); return;
+        Demo_Print("GET | SET,<ID:1..4294967295>,<CH:0..49> | DEFAULT | HELP\r\n"); return;
     }
     if(strcmp((const char *)line, "DEFAULT") == 0) {
         config.id = 1U; config.channel = 0U; config.configured = 0U;
@@ -566,7 +567,7 @@ void WirelessDemo_Init(void)
     g_demo.error = g_demo.storage_ok ? "UNPAIRED" : "FLASH_OVERLAP";
     usart_interrupt_enable(BSP_USART, USART_INT_RBNE); nvic_irq_enable(USART1_IRQn, 1U);
 #if WIRELESS_DEMO_TX
-    Demo_Print("\r\nWIRELESS V3 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04\r\n");
+    Demo_Print("\r\nWIRELESS V4 F50 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04\r\n");
 #else
     Demo_Print("\r\nWIRELESS V2 RX221 UART=115200 8N1\r\n");
 #endif

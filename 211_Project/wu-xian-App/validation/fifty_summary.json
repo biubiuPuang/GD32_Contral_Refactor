@@ -1,0 +1,297 @@
+{
+  "profile": "F50_FIXED_CANDIDATE",
+  "base_registers": [
+    66,
+    120,
+    217,
+    26,
+    66,
+    98,
+    39,
+    26
+  ],
+  "channels": [
+    {
+      "channel": 0,
+      "nominal_hz": 433125000,
+      "afc": 21
+    },
+    {
+      "channel": 1,
+      "nominal_hz": 433157500,
+      "afc": 21
+    },
+    {
+      "channel": 2,
+      "nominal_hz": 433190000,
+      "afc": 21
+    },
+    {
+      "channel": 3,
+      "nominal_hz": 433222500,
+      "afc": 21
+    },
+    {
+      "channel": 4,
+      "nominal_hz": 433255000,
+      "afc": 21
+    },
+    {
+      "channel": 5,
+      "nominal_hz": 433287500,
+      "afc": 21
+    },
+    {
+      "channel": 6,
+      "nominal_hz": 433320000,
+      "afc": 21
+    },
+    {
+      "channel": 7,
+      "nominal_hz": 433352500,
+      "afc": 21
+    },
+    {
+      "channel": 8,
+      "nominal_hz": 433385000,
+      "afc": 21
+    },
+    {
+      "channel": 9,
+      "nominal_hz": 433417500,
+      "afc": 21
+    },
+    {
+      "channel": 10,
+      "nominal_hz": 433450000,
+      "afc": 21
+    },
+    {
+      "channel": 11,
+      "nominal_hz": 433482500,
+      "afc": 21
+    },
+    {
+      "channel": 12,
+      "nominal_hz": 433515000,
+      "afc": 21
+    },
+    {
+      "channel": 13,
+      "nominal_hz": 433547500,
+      "afc": 21
+    },
+    {
+      "channel": 14,
+      "nominal_hz": 433580000,
+      "afc": 21
+    },
+    {
+      "channel": 15,
+      "nominal_hz": 433612500,
+      "afc": 21
+    },
+    {
+      "channel": 16,
+      "nominal_hz": 433645000,
+      "afc": 21
+    },
+    {
+      "channel": 17,
+      "nominal_hz": 433677500,
+      "afc": 21
+    },
+    {
+      "channel": 18,
+      "nominal_hz": 433710000,
+      "afc": 21
+    },
+    {
+      "channel": 19,
+      "nominal_hz": 433742500,
+      "afc": 21
+    },
+    {
+      "channel": 20,
+      "nominal_hz": 433775000,
+      "afc": 21
+    },
+    {
+      "channel": 21,
+      "nominal_hz": 433807500,
+      "afc": 21
+    },
+    {
+      "channel": 22,
+      "nominal_hz": 433840000,
+      "afc": 21
+    },
+    {
+      "channel": 23,
+      "nominal_hz": 433872500,
+      "afc": 21
+    },
+    {
+      "channel": 24,
+      "nominal_hz": 433905000,
+      "afc": 21
+    },
+    {
+      "channel": 25,
+      "nominal_hz": 433937500,
+      "afc": 21
+    },
+    {
+      "channel": 26,
+      "nominal_hz": 433970000,
+      "afc": 21
+    },
+    {
+      "channel": 27,
+      "nominal_hz": 434002500,
+      "afc": 21
+    },
+    {
+      "channel": 28,
+      "nominal_hz": 434035000,
+      "afc": 21
+    },
+    {
+      "channel": 29,
+      "nominal_hz": 434067500,
+      "afc": 21
+    },
+    {
+      "channel": 30,
+      "nominal_hz": 434100000,
+      "afc": 21
+    },
+    {
+      "channel": 31,
+      "nominal_hz": 434132500,
+      "afc": 21
+    },
+    {
+      "channel": 32,
+      "nominal_hz": 434165000,
+      "afc": 21
+    },
+    {
+      "channel": 33,
+      "nominal_hz": 434197500,
+      "afc": 21
+    },
+    {
+      "channel": 34,
+      "nominal_hz": 434230000,
+      "afc": 21
+    },
+    {
+      "channel": 35,
+      "nominal_hz": 434262500,
+      "afc": 21
+    },
+    {
+      "channel": 36,
+      "nominal_hz": 434295000,
+      "afc": 21
+    },
+    {
+      "channel": 37,
+      "nominal_hz": 434327500,
+      "afc": 21
+    },
+    {
+      "channel": 38,
+      "nominal_hz": 434360000,
+      "afc": 21
+    },
+    {
+      "channel": 39,
+      "nominal_hz": 434392500,
+      "afc": 21
+    },
+    {
+      "channel": 40,
+      "nominal_hz": 434425000,
+      "afc": 21
+    },
+    {
+      "channel": 41,
+      "nominal_hz": 434457500,
+      "afc": 21
+    },
+    {
+      "channel": 42,
+      "nominal_hz": 434490000,
+      "afc": 21
+    },
+    {
+      "channel": 43,
+      "nominal_hz": 434522500,
+      "afc": 21
+    },
+    {
+      "channel": 44,
+      "nominal_hz": 434555000,
+      "afc": 21
+    },
+    {
+      "channel": 45,
+      "nominal_hz": 434587500,
+      "afc": 21
+    },
+    {
+      "channel": 46,
+      "nominal_hz": 434620000,
+      "afc": 21
+    },
+    {
+      "channel": 47,
+      "nominal_hz": 434652500,
+      "afc": 21
+    },
+    {
+      "channel": 48,
+      "nominal_hz": 434685000,
+      "afc": 21
+    },
+    {
+      "channel": 49,
+      "nominal_hz": 434717500,
+      "afc": 21
+    }
+  ],
+  "workbook_sha256": "d0aac0145987725e3b78c3ba504bc554796039c084f43fe48b764bd6f0bf10da",
+  "workbook_formula_tokens_verified": true,
+  "xtal_mhz": 26,
+  "tx_rx_ppm_each": 40,
+  "protected_files": 142,
+  "unchanged_behavior_functions": 30,
+  "tests": [
+    "211 three-key + PA8 E-stop debounce/priority/repeat/release/reboot + protocol A2 behavior tests PASS",
+    "PASS: startup, debounce, immediate stop, up/down, fast-only, reversal, speed, conflict, software stop, recovery, rollover, 200000-step interlocks.",
+    "PASS: actual port code, safe GPIO preload/order, 72MHz prescaler, timer doubling/rollover/fraction, 1000ms snapshots, UART backpressure, brief software stop, output readback fault.",
+    "PASS integrated real RX + GPIO + execution: A2 motion/STOP/wireless E-stop, global E-stop priority, 85ms E-stop expiry restores wired, physical E-stop independent, release/reboot/fault/maintenance isolation, wired regression/unpaired/radio absent, feedback gating, no stale RF restart, reversal/fast timing, CRC/ID/tag/all invalid commands, journal power loss, UART backpressure, timer rollover."
+  ],
+  "tx_build": {
+    "errors": 0,
+    "warnings": 0,
+    "program_size": "Program Size: Code=16584 RO-data=928 RW-data=4 ZI-data=1876",
+    "hex_end_exclusive": "0x8004470",
+    "hex_sha256": "8330455657205bc0cad65d9e71b3ce969dc68b5cdf005dcfe2855cccacd5aadd"
+  },
+  "rx_build": {
+    "errors": 0,
+    "warnings": 0,
+    "program_size": "Program Size: Code=21050 RO-data=950 RW-data=4 ZI-data=2172",
+    "hex_end_exclusive": "0x80055f8",
+    "hex_sha256": "2943f7fbfd11aa11aa951bdc2dd24c36ba2d987ec7f3d570ae26e3c16e42e214"
+  },
+  "hardware_tested": false,
+  "multi_pair_concurrency_validated": false,
+  "continuous_frequency_hopping_implemented": false,
+  "configuration_record_format_unchanged": true,
+  "wireless_timeout_ms": 85,
+  "control_protocol": "A2"
+}
