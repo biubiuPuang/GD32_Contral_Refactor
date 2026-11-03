@@ -50,7 +50,10 @@ int main(void)
         /* 4. 每隔 1 秒打印当前状态，不阻塞主循环。 */
         Demo_ReportIfDue();
 
-        /* 5. 主循环完整执行一轮后执行喂狗操作 */
-        fwdgt_counter_reload();
+        /* 5. 空闲180秒后进入低功耗，按键唤醒后返回。 */
+        Demo_LowPowerProcess();
+
+        /* 6. 主循环完整执行一轮后，由应用限制喂狗频率。 */
+        Demo_WatchdogFeed();
     }
 }

@@ -1,0 +1,46 @@
+{
+  "errors": 0,
+  "warnings": 0,
+  "program_size": "Program Size: Code=20476 RO-data=924 RW-data=4 ZI-data=1892  \r",
+  "hex_end_exclusive": "0x80053a0",
+  "hex_sha256": "519fdc3b0f20a52940a66a4d40c1e6168ebc1659e8943275d959bb806b3a6bbd",
+  "version": "V5 F50 LP180",
+  "idle_seconds": 180,
+  "wake_inputs": [
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PA8",
+    "PA9",
+    "PA10"
+  ],
+  "rtc_interval_seconds_nominal": 1,
+  "simulated_sleep_seconds": 3600,
+  "hardware_accessed": false,
+  "board_flashed": false,
+  "protected_files_unchanged_during_validation": 150,
+  "tests": [
+    "RUN: channel regression",
+    "RUN: pairing regression",
+    "RUN: Flash regression",
+    "RUN: UART regression",
+    "RUN: key regression",
+    "RUN: E-stop regression",
+    "RUN: log regression",
+    "PASS: every key mapping/IRQ and RTC EXTI17 configuration",
+    "PASS: 180s threshold, all seven held/released inputs, wrap and latched short pulse",
+    "PASS: no sleep with held key, active TX/STOP, RTC/radio fault, UART command or masked IRQ",
+    "PASS: all seven inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command",
+    "PASS: released short press, pending edge at WFI boundary, key during entry-log drain",
+    "PASS: UART TC/stop-bit wait and timeout, repeated sleep sessions, pairing/GET after wake",
+    "PASS: unpaired startup and DEFAULT also sleep without transmitting control",
+    "PASS: virtual hour of RTC feeds, no feed on spurious wake, radio/RTC/PLL failures and reload spacing",
+    "LOW POWER sender tests PASS; no hardware accessed."
+  ],
+  "sources": {
+    "211_Project\\wu-xian-App\\wireless_demo.c": "517e3336e3a5423f51cab2eb7e820c475431e62037a6d343287ec16936e34c8a",
+    "211_Project\\wu-xian-App\\wireless_demo.h": "ea3c9e6650e714a691b869965e5740aee2e73e3a5a46997189afce90e27fcd4e",
+    "211_Project\\User\\main.c": "db4c0d404939ba3ce97bff29cac1e9382c9e964247b43018f93d156e5d56eff5"
+  }
+}

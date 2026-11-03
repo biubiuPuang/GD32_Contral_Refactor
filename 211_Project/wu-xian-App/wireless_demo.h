@@ -9,11 +9,15 @@
  * the TX board configures active-low PA9/PA10 (DOWN), PB3/PB4 (UP),
  * PB5/PB6 (FAST), PA8 (active-low wireless E-stop) inputs with pull-ups.
  * Either direction/speed key stage means that key is held.
- * Application owns USART1_IRQHandler for buffered RX and nonblocking log TX.
+ * Application owns USART1_IRQHandler for buffered RX and nonblocking log TX,
+ * plus RTC/EXTI17 and key EXTI3/4/5/6/8/9/10 for LP180 deep sleep.
  * TIMER2 is reserved; no timer/SysTick IRQ handler is required.
  * Persistent settings use 0x0800F800..0x0800FFFF (last two 1KB pages).
  * First boot/default: unpaired. Provision BOTH boards with SET,<ID>,<CH>.
- * Call only from main context. Do not add blocking delays to the main loop.
+ * Call only from main context. Enable FWDGT as in User/main.c before processing
+ * low power, and call Demo_WatchdogFeed after a complete main-loop iteration.
+ * Do not add blocking delays while awake. Low power waits for a key and feeds
+ * FWDGT on RTC wakes without returning to normal application processing.
  */
 
 /* On-air payload: ID[4, MSB first], TAG, COMMAND, SEQ_H, SEQ_L.
@@ -45,6 +49,12 @@ void Demo_ButtonProcess(void);
 BOOL Demo_RadioCheckAndRetry(void);
 void Demo_TxProcess(void);
 void Demo_ReportIfDue(void);
+/* Call LowPowerProcess after reporting and before feeding the enabled FWDGT.
+ * It stays in deep sleep until any of the seven key inputs wakes it.
+ */
+void Demo_LowPowerProcess(void);
+void Demo_WatchdogFeed(void);
+BOOL Demo_ClockResume(void);
 
 /* Compatibility entry point for existing examples and validation. */
 void WirelessDemo_Process(void);

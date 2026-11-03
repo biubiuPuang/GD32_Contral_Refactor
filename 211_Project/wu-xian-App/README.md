@@ -1,5 +1,7 @@
 # 211 三组按键＋无线急停发送 F50 候选版（协议 A2）
 
+**V5 F50 LP180低功耗：** 全部按键松开后空闲180秒，待停止包和串口发送完成后进入深度睡眠；全部7个按键输入均可唤醒。RTC每约1秒短暂唤醒喂狗，进入/退出各打印一次指定日志。完整行为、调用顺序和上板验证见[低功耗说明](LOW_POWER.md)。本版本验证入口为`python 211_Project/wu-xian-App/validation/check_low_power.py`。
+
 **F50更新：** 支持串口选择CH0～49，名义433.1250～434.7175MHz，间隔32.5kHz。
 这是每套固定一个频道的候选实现，配置时复用AN197手动跳频接口，未加入运行时自动跳频。
 A2控制语义、40～60ms发包节奏、85ms有效期、按键/急停、有线执行、日志和Flash记录格式保持。
@@ -10,8 +12,8 @@ A2控制语义、40～60ms发包节奏、85ms有效期、按键/急停、有线�
 
 本版在原 PA9/PA10 单组按键 Demo 上增加上升、快速按键，并发送完整方向和速度状态。
 新增 PA8 低有效无线急停，按下和松开独立进行 10ms 非阻塞消抖，优先于所有方向和快速组合。
-所有应用改动位于 `211_Project/wu-xian-App`。211 底层 `wu-xian_interface`、原始 RFPDK
-参数、配对记录格式、User/main.c 和原 Keil 工程配置均保持原样。
+低功耗应用逻辑位于 `211_Project/wu-xian-App`，`User/main.c`增加休眠处理及限制频率的喂狗调用。
+211 底层 `wu-xian_interface`、原始 RFPDK 参数、配对记录格式和原 Keil 工程配置保持原样。
 **221 当前已接入本版 A2 无线命令，与有线共用执行状态机。**
 无线急停在有效期内同时禁止有线和无线运动；普通运动同时操作时的完整仲裁、来源识别和速度选择尚未解决。
 接收端使用方法见 `221_Project/wu-xian-App/README.md`，最新控制版本尚无完整控制板实测结论。
@@ -19,10 +21,10 @@ A2控制语义、40～60ms发包节奏、85ms有效期、按键/急停、有线�
 ## 打开、编译及运行
 
 打开 `211_Project/Project/GD32E230C8T6.uvprojx`，Rebuild 后烧录发送板。
-原主程序继续调用项目自定义函数 `WirelessDemo_Init()`、`WirelessDemo_Process()`，无需修改。
-主循环持续调用 Process，不要添加 300ms 等阻塞延时。
+实际主程序见 `User/main.c`：初始化后启用FWDGT，再依次处理串口、按键、无线、日志、低功耗和喂狗。
+也可以使用 `main_example.c`中的完整调用顺序。清醒期间不要添加300ms等阻塞延时；深睡期间由低功耗流程等待按键并处理RTC喂狗。
 
-上电串口显示 `WIRELESS V3 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04`。
+上电串口显示 `WIRELESS V5 F50 LP180 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04`，并增加一次`RTC INIT OK/FAIL`。
 两端都需使用支持 `ESTOP=08 STATUS=03/04` 的本版固件；旧 A2 接收固件会拒绝 08，不能执行无线急停。
 若 Keil 仍显示旧内容，重新载入磁盘文件，不要用旧编辑缓冲区覆盖新源码。
 串口 115200、8N1，PA2=TX、PA3=RX，共地；每 1000ms 只打印当时的按键状态，不再输出 KEY/数据统计。
@@ -107,11 +109,11 @@ STOP 只是无线普通停止，不能与有效期内的全局无线急停混淆
 上电初始化结束仅打印一次版本、CFG（含频率）和 INIT 结果。GET/SET/DEFAULT/HELP
 及命令错误仍即时回复；不会每秒重复配置。`INIT OK` 表示本机无线初始化成功，不是接收端已连接。
 
-每 1000ms 输出一条当前按键快照（均以 `\r\n` 结束，保留约定拼写）：
+清醒期间每1000ms输出一条当前按键快照（均以 `\r\n` 结束，保留约定拼写）；真正深睡期间暂停快照：
 
 | 当前按键 | 输出 |
 | --- | --- |
-| 无按键 | `sleep model` |
+| 无按键 | `no key press model` |
 | 上升 / 下降 | `up` / `dowm` |
 | 上升＋快速 / 下降＋快速 | `fast up` / `fast dowm` |
 | 单独快速 | `wu-xian fast` |
@@ -155,23 +157,23 @@ F50 保留原始96字节数组和 .exp，在应用初始化时替换8字节频�
 
 ## 资源与验证
 
-继续占用 TIMER2（10kHz 轮询计时）、USART1_IRQHandler、SysTick 延时 BSP。
+占用TIMER2（10kHz轮询计时）、USART1_IRQHandler、SysTick延时BSP，另增加RTC/EXTI17及按键EXTI3/4/5/6/8/9/10。
 配置区仍是末两页 Flash：0x0800F800..0x0800FFFF；配置记录和防重叠检查保持原样。
 
 当前 211 验证入口：
 
 ```powershell
-python 211_Project/wu-xian-App/validation/check_sender.py
+python 211_Project/wu-xian-App/validation/check_low_power.py
 ```
 
 该脚本使用本机 GCC 测试真实应用源码，覆盖三组按键 64 种触点组合、独立消抖、两级切换、
 快速组合、冲突即时停止及恢复、停止包次数、周期发包、序号/计时回绕、无线故障恢复，
 并复用配对、串口、Flash 断电记录等既有模拟测试。
 新增 PA8 两边沿消抖、64 种普通按键组合下急停优先、持续发包、松开恢复当前状态、启动/重启及计时回绕测试。
-本轮已核对并更新合法变更对应的保护基线。旧“221 拒绝 A2”的阶段假设已由真实 221 集成接收/执行测试替代。
+低功耗入口对既有BSP、官方库、接收端及工程文件进行验证前后的哈希对比，历史保护基线保留。旧“221 拒绝 A2”的阶段假设已由历史221集成接收/执行测试替代。
 脚本还会通过本机 Keil 重编译原 211 工程，检查 HEX 不覆盖配置区及受保护源文件。
 
-211 本轮测试记录：`validation/sender_v3_summary.json`、`validation/sender_v3_build.log`。
+211低功耗版本测试记录：`validation/low_power_summary.json`、`validation/low_power_build.log`，同时覆盖原有发送端回归测试。`sender_v3_*`为历史记录。
 当前 221 集成验证入口如下，覆盖真实接收服务、GPIO 适配、执行状态机与协调循环，外设使用主机模拟，
 并完整构建原 221 Keil 工程：
 

@@ -20,11 +20,12 @@ static uint8_t registers[128],packet[8],flags,status;
 static unsigned bank_bytes,fifo_reads,fifo_writes,rx_starts,init_calls;
 static int timer_clock_enabled,gpio_clock,systick_ready,available,corrupt_readback;
 static int rx_fail,overflow,done,fifo_selected,fifo_cleared,stby_fail;
-static uint32_t pins,irq_mask,uart_flags[4],uart_byte;
+static uint32_t pins,irq_mask,uart_flags[8],uart_byte;
 static uint32_t flash[512],image_limit;
 static unsigned flash_writes,flash_erases,program_calls;
 static int flash_unlocked,fail_program,fail_erase;
 static int tx_irq;
+#include "low_power_mocks.h"
 
 static u32 Demo_ReadWord(u32 address)
 {
@@ -34,7 +35,7 @@ static u32 Demo_ReadWord(u32 address)
 static u32 Demo_ImageLimit(void) { return image_limit; }
 uint32_t __get_PRIMASK(void) { return irq_mask; }
 void __disable_irq(void) { irq_mask=1U; }
-void __enable_irq(void) { irq_mask=0U; }
+void __enable_irq(void) { irq_mask=0U; lp_dispatch_pending(); }
 void fmc_unlock(void) { assert(irq_mask); flash_unlocked=1; }
 void fmc_lock(void) { flash_unlocked=0; }
 void fmc_flag_clear(uint32_t f) { (void)f; assert(flash_unlocked); }
@@ -61,15 +62,25 @@ void rcu_periph_clock_enable(uint32_t c)
 {
     if(c==RCU_TIMER2)timer_clock_enabled=1;
     else if(c==RCU_GPIOA) gpio_clock |= 1;
-    else { assert(c==RCU_GPIOB);gpio_clock |= 2; }
+    else if(c==RCU_GPIOB) gpio_clock |= 2;
+    else assert(c==RCU_CFGCMP || c==RCU_PMU || c==RCU_RTC);
 }
 void timer_deinit(uint32_t t) { assert(t==TIMER2 && timer_clock_enabled); }
 void timer_struct_para_init(timer_parameter_struct *p) { memset(p,0,sizeof(*p)); }
 void timer_init(uint32_t t,timer_parameter_struct *p)
 { assert(t==TIMER2 && timer_clock_enabled && p->prescaler==7199U && p->period==65535U); }
 void timer_counter_value_config(uint32_t t,uint16_t v) { assert(t==TIMER2);counter=v; }
-void timer_enable(uint32_t t) { assert(t==TIMER2 && timer_clock_enabled); }
-uint32_t timer_counter_read(uint32_t t) { assert(t==TIMER2);return counter; }
+void timer_enable(uint32_t t) { assert(t==TIMER2 && timer_clock_enabled);lp_timer_running=1; }
+uint32_t timer_counter_read(uint32_t t)
+{
+    assert(t==TIMER2);
+    if(lp_auto_pump) {
+        if(lp_timer_running) ++counter;
+        if(tx_irq && !irq_mask) USART1_IRQHandler();
+        lp_drain_key_event();
+    }
+    return counter;
+}
 void gpio_mode_set(uint32_t port,uint32_t mode,uint32_t pull,uint32_t p)
 {
     assert(mode==GPIO_MODE_INPUT && pull==GPIO_PUPD_PULLUP);
@@ -80,19 +91,29 @@ uint32_t gpio_input_bit_get(uint32_t port,uint32_t p) { assert(port==GPIOA);retu
 uint16_t gpio_input_port_get(uint32_t port)
 { assert((port==GPIOA && (gpio_clock&1)) || (port==GPIOB && (gpio_clock&2)));return (uint16_t)pins; }
 void systick_config(void) { systick_ready=1; }
-void usart_init(uint32_t baud) { assert(baud==115200U && systick_ready); }
-uint32_t usart_flag_get(uint32_t port,uint32_t f) { assert(port==BSP_USART && f<4);return uart_flags[f]; }
+void usart_init(uint32_t baud) { assert(baud==115200U && systick_ready);lp_uart_enabled=1; }
+uint32_t usart_flag_get(uint32_t port,uint32_t f)
+{
+    assert(port==BSP_USART && (f<4 || f==USART_FLAG_TC));
+    if(f!=USART_FLAG_TC)return uart_flags[f];
+    if(strstr(output,"input sleep model\r\n")) {
+        if(lp_tc_delay_reads) { --lp_tc_delay_reads;++lp_tc_low_observed;return RESET; }
+        if(lp_tc_stall_after_entry)return RESET;
+    }
+    return (uint32_t)lp_tc_ready;
+}
 void usart_flag_clear(uint32_t port,uint32_t f) { assert(port==BSP_USART && f<4);uart_flags[f]=0; }
 uint16_t usart_data_receive(uint32_t port) { assert(port==BSP_USART);uart_flags[USART_FLAG_RBNE]=0;return (uint16_t)uart_byte; }
 void usart_interrupt_enable(uint32_t port,uint32_t f)
-{ assert(port==BSP_USART);if(f==USART_INT_TBE)tx_irq=1;else assert(f==USART_INT_RBNE); }
+{ assert(port==BSP_USART);if(f==USART_INT_TBE)tx_irq=1;else { assert(f==USART_INT_RBNE);lp_rx_irq=1; } }
 void usart_interrupt_disable(uint32_t port,uint32_t f)
-{ assert(port==BSP_USART && f==USART_INT_TBE);tx_irq=0; }
+{ assert(port==BSP_USART);if(f==USART_INT_TBE)tx_irq=0;else { assert(f==USART_INT_RBNE);lp_rx_irq=0; } }
 uint32_t usart_interrupt_flag_get(uint32_t port,uint32_t f)
 { assert(port==BSP_USART && f==USART_INT_FLAG_TBE);return (uint32_t)tx_irq; }
 void usart_data_transmit(uint32_t port,uint16_t value)
 { assert(port==BSP_USART && output_length+1<sizeof(output));output[output_length++]=(char)value;output[output_length]=0; }
-void nvic_irq_enable(uint32_t irq,uint32_t priority) { assert(irq==USART1_IRQn && priority==1U); }
+void nvic_irq_enable(uint32_t irq,uint32_t priority)
+{ assert((irq==USART1_IRQn && priority==1U) || ((irq==RTC_IRQn || irq==EXTI2_3_IRQn || irq==EXTI4_15_IRQn) && priority==2U));lp_nvic_enabled|=1U<<irq; }
 BOOL CMT2119B_Init(void) { ++init_calls;return (BOOL)available; }
 BOOL CMT2219B_Init(void) { ++init_calls;return (BOOL)available; }
 void CMT2119B_ConfigPolling(void) { flags=0; }
@@ -111,7 +132,7 @@ u8 CMT2300A_ReadReg(u8 address)
 void CMT2300A_WriteReg(u8 address,u8 value) { registers[address]=value; }
 void CMT2300A_SetFrequencyChannel(u8 channel) { registers[CMT2300A_CUS_FREQ_CHNL]=channel; }
 void CMT2300A_SetFrequencyStep(u8 step) { registers[CMT2300A_CUS_FREQ_OFS]=step; }
-BOOL CMT2300A_GoSleep(void) { status=CMT2300A_STA_SLEEP;return TRUE; }
+BOOL CMT2300A_GoSleep(void) { if(lp_radio_sleep_fail)return FALSE;status=CMT2300A_STA_SLEEP;return TRUE; }
 BOOL CMT2300A_GoStby(void) { if(stby_fail)return FALSE;status=CMT2300A_STA_STBY;return TRUE; }
 BOOL CMT2300A_GoTx(void) { status=CMT2300A_STA_TX;return TRUE; }
 BOOL CMT2300A_GoRx(void)
@@ -152,6 +173,7 @@ static void reset(int clear_flash)
     pins=GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;irq_mask=0;
     flash_writes=flash_erases=program_calls=0;flash_unlocked=fail_program=fail_erase=tx_irq=0;
     image_limit=0x08006000U;
+    lp_reset();
     WirelessDemo_Init();flush_output();
 }
 static void advance(u16 ticks) { counter=(u16)(counter+ticks);WirelessDemo_Process(); }
@@ -385,6 +407,7 @@ static void check_button(void)
     /* Key timing across 16/32-bit wrap; radio failures stay recoverable. */
     reset(1);configure(1,0);drain_stops();
     counter=65520U;g_demo.previous_timer=counter;g_demo.ticks=UINT32_MAX-50U;
+    g_idle_since=g_demo.ticks;
     pins&=~GPIO_PIN_3;advance(1);advance(100);expect_command(WIRELESS_CMD_UP);
     advance(DEMO_TX_TIMEOUT);assert(!g_demo.ready && strcmp(g_demo.error,"TX_TIMEOUT")==0);
     advance(10000U);assert(g_demo.ready);WirelessDemo_Process();expect_command(WIRELESS_CMD_UP);
@@ -414,7 +437,7 @@ static void check_snapshot_logs(void)
     reset(1);configure(1U,0U);reset(0);
     assert(strstr(output,"FREQ=433.1250MHz") && strstr(output,"INIT OK\r\n"));
     clear_output();log_ticks(9999U);assert(!output_length);
-    log_ticks(1U);assert(strcmp(output,"sleep model\r\n")==0);
+    log_ticks(1U);assert(strcmp(output,"no key press model\r\n")==0);
     expect_snapshot(GPIO_PIN_3,"up\r\n");
     expect_snapshot(GPIO_PIN_9,"dowm\r\n");
     expect_snapshot(GPIO_PIN_3|GPIO_PIN_5,"fast up\r\n");
@@ -422,11 +445,11 @@ static void check_snapshot_logs(void)
     expect_snapshot(GPIO_PIN_5,"wu-xian fast\r\n");
     expect_snapshot(GPIO_PIN_3|GPIO_PIN_9,"error model\r\n");
     expect_snapshot(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_9,"stop model\r\n");
-    expect_snapshot(0U,"sleep model\r\n");
+    expect_snapshot(0U,"no key press model\r\n");
     /* A complete short press between snapshots must not produce edge logs. */
     clear_output();keys(GPIO_PIN_3);keys(0U);assert(!output_length);
     log_ticks(10000U-(u32)(g_demo.ticks-g_demo.report_at));
-    assert(strcmp(output,"sleep model\r\n")==0);
+    assert(strcmp(output,"no key press model\r\n")==0);
     /* GET/HELP remain immediate; periodic failures never repeat configuration. */
     clear_output();command("GET");command("HELP");
     assert(strstr(output,"CFG ID=") && strstr(output,"GET | SET"));
@@ -435,10 +458,11 @@ static void check_snapshot_logs(void)
     assert(strstr(output,"ERR RADIO CONFIG_READBACK\r\n") && !strstr(output,"connect"));
     assert(!strstr(output,"CFG ") && !strstr(output,"INIT ") && !strstr(output,"KEY "));
     corrupt_readback=0;log_ticks(10000U);assert(g_demo.ready);
-    clear_output();log_ticks(10000U);assert(strcmp(output,"sleep model\r\n")==0);
+    clear_output();log_ticks(10000U);assert(strcmp(output,"no key press model\r\n")==0);
     g_demo.ticks=UINT32_MAX-5000U;g_demo.report_at=g_demo.ticks;
+    g_idle_since=g_demo.ticks;
     clear_output();log_ticks(9999U);assert(!output_length);
-    log_ticks(1U);assert(strcmp(output,"sleep model\r\n")==0);
+    log_ticks(1U);assert(strcmp(output,"no key press model\r\n")==0);
 }
 
 static void check_estop(void)
@@ -490,6 +514,7 @@ static void check_estop(void)
     advance(10000U);WirelessDemo_Process();expect_command(WIRELESS_CMD_ESTOP);
     pins|=GPIO_PIN_8;advance(1);advance(100);drain_stops();
     g_demo.ticks=UINT32_MAX-50U;g_demo.previous_timer=counter;
+    g_idle_since=g_demo.ticks;
     pins&=~GPIO_PIN_8;advance(1);advance(100);expect_command(WIRELESS_CMD_ESTOP);
 }
 
