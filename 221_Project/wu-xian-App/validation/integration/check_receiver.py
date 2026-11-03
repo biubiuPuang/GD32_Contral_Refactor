@@ -31,7 +31,7 @@ def project_check():
     for node in tree.findall(".//FilePath"):
         assert (PROJECT.parent / node.text).resolve().is_file(), node.text
     main = (ROOT / "221_Project/User/main.c").read_text(encoding="utf-8")
-    assert "ReceiverApp_Init();" in main and "ReceiverApp_Process();" in main
+    assert "ReceiverApp_Init();" in main and "ReceiverApp_SyncRemote();" in main
     assert main == (APP / "main_example.c").read_text(encoding="utf-8")
     for name in ("wireless_demo.h",):
         tx = (ROOT / "211_Project/wu-xian-App" / name).read_text(encoding="utf-8")

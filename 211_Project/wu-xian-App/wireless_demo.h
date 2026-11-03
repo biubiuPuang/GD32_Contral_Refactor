@@ -1,7 +1,10 @@
 #ifndef WIRELESS_DEMO_H
 #define WIRELESS_DEMO_H
 
-/* Project application functions. Call Init once, then Process in a tight loop.
+#include "typedefs.h"
+
+/* Project application functions. Call Init once, then run the explicit steps
+ * below in a tight loop, or use the compatible WirelessDemo_Process wrapper.
  * Init configures the existing SysTick delay BSP, USART1 and TIMER2;
  * the TX board configures active-low PA9/PA10 (DOWN), PB3/PB4 (UP),
  * PB5/PB6 (FAST), PA8 (active-low wireless E-stop) inputs with pull-ups.
@@ -10,7 +13,7 @@
  * TIMER2 is reserved; no timer/SysTick IRQ handler is required.
  * Persistent settings use 0x0800F800..0x0800FFFF (last two 1KB pages).
  * First boot/default: unpaired. Provision BOTH boards with SET,<ID>,<CH>.
- * Call only from main context. Do not add a 300 ms delay around Process.
+ * Call only from main context. Do not add blocking delays to the main loop.
  */
 
 /* On-air payload: ID[4, MSB first], TAG, COMMAND, SEQ_H, SEQ_L.
@@ -32,6 +35,18 @@
 #define WIRELESS_CMD_DOWN_FAST     (WIRELESS_CMD_DOWN | WIRELESS_CMD_FAST)
 
 void WirelessDemo_Init(void);
+
+/* Main-loop steps: UART -> keys -> radio check/TX -> periodic report.
+ * RadioCheckAndRetry returns FALSE during recovery; TX resumes next loop.
+ * Internal configuration and runtime state remain private to the application.
+ */
+void Demo_UartProcess(void);
+void Demo_ButtonProcess(void);
+BOOL Demo_RadioCheckAndRetry(void);
+void Demo_TxProcess(void);
+void Demo_ReportIfDue(void);
+
+/* Compatibility entry point for existing examples and validation. */
 void WirelessDemo_Process(void);
 
 #endif

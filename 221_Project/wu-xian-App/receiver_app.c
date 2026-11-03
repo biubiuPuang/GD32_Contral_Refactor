@@ -20,7 +20,7 @@ void ReceiverApp_Init(void)
     WirelessDemo_SetStatusProvider(WiredControl_StatusLine, WiredControl_Error);
 }
 
-static void ReceiverApp_SyncRemote(void)
+void ReceiverApp_SyncRemote(void)
 {
     uint8_t command = WirelessDemo_GetCommand();
     /* Valid RF E-stop overrides wired as well as RF motion. The RX service
@@ -30,6 +30,7 @@ static void ReceiverApp_SyncRemote(void)
     WiredControl_SetRemoteCommand(command == WIRELESS_CMD_ESTOP ? WIRELESS_CMD_STOP : command);
 }
 
+/* Compatibility entry point; main.c now runs these steps explicitly. */
 void ReceiverApp_Process(void)
 {
     /* Service motion before and after SPI/UART work. Radio initialization

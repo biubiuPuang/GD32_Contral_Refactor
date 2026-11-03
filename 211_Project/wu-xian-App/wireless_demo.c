@@ -322,7 +322,7 @@ static u32 Demo_Random(void)
     x ^= x << 13; x ^= x >> 17; x ^= x << 5;
     g_demo.random = x; return x;
 }
-static void Demo_ButtonProcess(void)
+void Demo_ButtonProcess(void)
 {
     u8 raw = 0U, i, command;
     u16 pa = gpio_input_port_get(GPIOA), pb = gpio_input_port_get(GPIOB);
@@ -379,7 +379,7 @@ static void Demo_ButtonProcess(void)
         g_demo.stops_left = command ? 0U : 3U; g_demo.next_at = now;
     }
 }
-static void Demo_TxProcess(void)
+void Demo_TxProcess(void)
 {
     u32 now = Demo_Now();
     if(!g_demo.estop_ready) return;
@@ -498,7 +498,7 @@ static void Demo_Command(const u8 *line)
     else Demo_Print("OK SAVED APPLIED\r\n");
     Demo_ShowConfig();
 }
-static void Demo_UartProcess(void)
+void Demo_UartProcess(void)
 {
     u8 value, budget = 64U;
     u32 irq;
@@ -576,25 +576,46 @@ void WirelessDemo_Init(void)
     Demo_Print("INIT %s\r\n", g_demo.ready ? "OK" : g_demo.error);
     g_demo.report_at = Demo_Now();
 }
-void WirelessDemo_Process(void)
+/* Check configuration and recover the radio without delaying the main loop. */
+BOOL Demo_RadioCheckAndRetry(void)
 {
     u32 now;
+
+    if(!g_config.configured || !g_demo.storage_ok) return FALSE;
+    if(g_demo.ready) return TRUE;
+
+    now = Demo_Now();
+    if((u32)(now - g_demo.retry_at) >= DEMO_RETRY_TICKS) {
+        (void)Demo_RadioInit();
+    }
+
+    /* Preserve the original recovery order: transmit from the next loop. */
+    return FALSE;
+}
+
+/* Print a snapshot once per second without blocking radio processing. */
+void Demo_ReportIfDue(void)
+{
+    u32 now = Demo_Now();
+
+    if((u32)(now - g_demo.report_at) < DEMO_PRINT_TICKS) return;
+
+    g_demo.report_at = now;
+    Demo_Report();
+}
+
+void WirelessDemo_Process(void)
+{
     Demo_UartProcess();
 #if WIRELESS_DEMO_TX
     Demo_ButtonProcess();
 #endif
-    now = Demo_Now();
-    if(g_config.configured && g_demo.storage_ok) {
-        if(!g_demo.ready) {
-            if((u32)(now - g_demo.retry_at) >= DEMO_RETRY_TICKS) (void)Demo_RadioInit();
-        } else {
+    if(Demo_RadioCheckAndRetry()) {
 #if WIRELESS_DEMO_TX
-            Demo_TxProcess();
+        Demo_TxProcess();
 #else
-            Demo_RxProcess();
+        Demo_RxProcess();
 #endif
-        }
     }
-    now = Demo_Now();
-    if((u32)(now - g_demo.report_at) >= DEMO_PRINT_TICKS) { g_demo.report_at = now; Demo_Report(); }
+    Demo_ReportIfDue();
 }
