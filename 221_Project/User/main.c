@@ -1,6 +1,8 @@
 #include "receiver_app.h"
 #include "wireless_demo.h"
 #include "wired_control.h"
+#include "gd32e23x_fwdgt.h"
+
 
 int main(void)
 {
@@ -8,6 +10,26 @@ int main(void)
      * GPIO 和外设时钟由现有初始化过程开启，同时关联维护和日志接口。
      */
     ReceiverApp_Init();
+
+    /* 开启看门狗使用的内部 40kHz 时钟 */
+    rcu_osci_on(RCU_IRC40K);
+    /* 等待看门狗时钟稳定，失败则停在这里 */
+    if (SUCCESS != rcu_osci_stab_wait(RCU_IRC40K))
+    {
+        while (1)
+        {
+        }
+    }
+    /* 配置看门狗：64分频，重装载值1250，超时约2秒 */
+    if (SUCCESS != fwdgt_config(1250U, FWDGT_PSC_DIV64))
+    {
+        /* 配置失败，停止继续运行 */
+        while (1)
+        {
+        }
+    }
+    /* 启动看门狗，只执行一次 */
+    fwdgt_enable();
 
     while (1)
     {
@@ -35,5 +57,8 @@ int main(void)
 
         /* 7. 每隔 1 秒打印更新后的动作和无线状态。 */
         WirelessDemo_ReportProcess();
+
+        /* 8. 完整处理一轮接收和执行控制后喂狗 */
+        fwdgt_counter_reload();
     }
 }
