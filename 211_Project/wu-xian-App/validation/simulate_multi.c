@@ -518,6 +518,53 @@ static void check_estop(void)
     pins&=~GPIO_PIN_8;advance(1);advance(100);expect_command(WIRELESS_CMD_ESTOP);
 }
 
+static void check_restart_release(void)
+{
+    const u32 causes[]={RCU_FLAG_FWDGTRST,RCU_FLAG_WWDGTRST,RCU_FLAG_SWRST,
+                        RCU_FLAG_PORRST|RCU_FLAG_FWDGTRST};
+    const u32 held_keys[]={GPIO_PIN_3,GPIO_PIN_4,GPIO_PIN_9,GPIO_PIN_10,
+                          GPIO_PIN_3|GPIO_PIN_5,GPIO_PIN_9|GPIO_PIN_6,
+                          GPIO_PIN_3|GPIO_PIN_9,GPIO_PIN_5,GPIO_PIN_6};
+    for(unsigned c=0;c<sizeof(causes)/sizeof(causes[0]);++c) {
+        for(unsigned k=0;k<sizeof(held_keys)/sizeof(held_keys[0]);++k) {
+            reset(1);configure(1U,0U);pins=all_keys&~held_keys[k];
+            reset_flags=causes[c];WirelessDemo_Init();flush_output();
+            assert(!reset_flags && g_demo.restart_wait);
+            advance(1U);advance(100U);expect_command(WIRELESS_CMD_STOP);
+            drain_stops();assert(g_demo.restart_wait);
+            /* Switching to the other held direction is not a full release. */
+            keys(GPIO_PIN_9);expect_command(WIRELESS_CMD_STOP);assert(g_demo.restart_wait);
+            pins=all_keys;advance(1U);advance(90U);
+            pins&=~GPIO_PIN_9;advance(1U);advance(100U);
+            assert(g_demo.restart_wait);expect_command(WIRELESS_CMD_STOP);
+            keys(0U);advance(99U);assert(g_demo.restart_wait);
+            advance(1U);assert(!g_demo.restart_wait);expect_command(WIRELESS_CMD_STOP);
+            keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);
+        }
+    }
+    /* A power-on restart still transmits an already-held direction normally. */
+    reset(1);configure(1U,0U);pins=all_keys&~GPIO_PIN_9;
+    reset_flags=RCU_FLAG_PORRST;WirelessDemo_Init();advance(1U);advance(100U);
+    assert(!g_demo.restart_wait);expect_command(WIRELESS_CMD_DOWN);
+    /* E-stop remains higher priority, but releasing E-stop with UP still held
+     * must not release the abnormal-restart motion interlock. */
+    reset_flags=RCU_FLAG_FWDGTRST;pins=all_keys&~(GPIO_PIN_3|GPIO_PIN_8);
+    WirelessDemo_Init();advance(1U);advance(100U);expect_command(WIRELESS_CMD_ESTOP);
+    keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_STOP);assert(g_demo.restart_wait);
+    keys(0U);advance(100U);assert(!g_demo.restart_wait);
+    keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
+    /* UART configuration and radio retry cannot bypass release. */
+    reset_flags=RCU_FLAG_SWRST;pins=all_keys&~GPIO_PIN_3;WirelessDemo_Init();
+    configure(1U,0U);advance(100U);expect_command(WIRELESS_CMD_STOP);
+    assert(g_demo.restart_wait);
+    /* Confirm release across the uint32 application-time wrap. */
+    g_demo.ticks=UINT32_MAX-50U;g_demo.previous_timer=counter;
+    keys(0U);advance(100U);assert(!g_demo.restart_wait);
+    keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);flush_output();
+    assert(strstr(output,"RESET SOFTWARE WAIT RELEASE\r\n"));
+    puts("PASS sender restart: cold held-key startup, watchdog/software release gate, both contacts, direction/FAST/conflict, debounce, ESTOP priority, config, wrap.");
+}
+
 #else
 static void inject(u32 id,u8 action,u8 tag,u8 event_flags)
 {
@@ -548,7 +595,7 @@ int main(void)
 {
     check_fifty_channels();check_configuration();check_power_loss();check_uart_and_faults();
 #if WIRELESS_DEMO_TX
-    check_button();check_estop();check_snapshot_logs();
+    check_button();check_estop();check_restart_release();check_snapshot_logs();
 #else
     check_receive();
 #endif

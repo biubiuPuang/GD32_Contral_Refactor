@@ -29,7 +29,7 @@
 #define DEMO_PRINT_TICKS 10000U /* 1000ms, TIMER2=10kHz */
 /*--------------低功耗开始-----------------*/
 // 计算方法：等待秒数 × 10000。
-#define DEMO_IDLE_TICKS 180000UL /* 180秒，计时频率10kHz */
+#define DEMO_IDLE_TICKS 1800000UL /* 180秒，计时频率10kHz */
 #define DEMO_UART_DRAIN_TICKS 1000U /* 最多等待串口100ms */
 #define DEMO_WATCHDOG_FEED_TICKS 100U /* 正常运行时每10ms喂狗 */
 /*--------------低功耗结束-----------------*/
@@ -58,6 +58,8 @@ static struct {
     u8 pending[8], latest[8], line[64];
     u8 line_size, discard, button_raw, button_bits, button_command, button_conflict, action, stops_left;
     u8 estop_raw, estop_pressed, estop_ready;
+    u8 restart_wait, restart_idle_tracking;
+    u32 restart_idle_at;
     BOOL ready, busy, have_latest, storage_ok;
     const char *error;
 } g_demo;
@@ -411,6 +413,19 @@ void Demo_ButtonProcess(void)
     if(g_demo.button_conflict || command == (WIRELESS_CMD_UP | WIRELESS_CMD_DOWN))
         command = WIRELESS_CMD_CONFLICT;
     else if(g_demo.button_bits & WIRELESS_CMD_FAST) command |= WIRELESS_CMD_FAST;
+    if(g_demo.restart_wait) {
+        if(raw || g_demo.button_bits) {
+            g_demo.restart_idle_tracking = 0U;
+        } else if(!g_demo.restart_idle_tracking) {
+            g_demo.restart_idle_tracking = 1U;
+            g_demo.restart_idle_at = now;
+        } else if((u32)(now - g_demo.restart_idle_at) >= DEMO_DEBOUNCE_TICKS) {
+            g_demo.restart_wait = 0U;
+            Demo_Print("RESTART KEYS RELEASED\r\n");
+        }
+        command = WIRELESS_CMD_STOP;
+    }
+    /* Emergency stop remains available even while waiting for key release. */
     if(g_demo.estop_pressed) command = WIRELESS_CMD_ESTOP;
 
     if(command != g_demo.button_command) {
@@ -809,7 +824,13 @@ static BOOL Demo_RtcInit(void)
 
 void WirelessDemo_Init(void) 
 {
+    u8 restart_cause = 0U;
+    if(rcu_flag_get(RCU_FLAG_FWDGTRST) != RESET) restart_cause |= 1U;
+    if(rcu_flag_get(RCU_FLAG_WWDGTRST) != RESET) restart_cause |= 2U;
+    if(rcu_flag_get(RCU_FLAG_SWRST) != RESET) restart_cause |= 4U;
+    rcu_all_reset_flag_clear();
     memset(&g_demo, 0, sizeof(g_demo)); g_uart_head = g_uart_tail = 0U; g_uart_fault = 0U;
+    g_demo.restart_wait = (u8)(restart_cause != 0U);
     g_uart_tx_head = g_uart_tx_tail = 0U;
     g_demo.sequence = 1U;
     g_key_wakeup = 0U;
@@ -867,6 +888,9 @@ void WirelessDemo_Init(void)
     if(!g_demo.random) g_demo.random = 1U;
     g_demo.error = g_demo.storage_ok ? "UNPAIRED" : "FLASH_OVERLAP";
     usart_interrupt_enable(BSP_USART, USART_INT_RBNE); nvic_irq_enable(USART1_IRQn, 1U);
+    if(restart_cause & 1U) Demo_Print("RESET FWDGT WAIT RELEASE\r\n");
+    if(restart_cause & 2U) Demo_Print("RESET WWDGT WAIT RELEASE\r\n");
+    if(restart_cause & 4U) Demo_Print("RESET SOFTWARE WAIT RELEASE\r\n");
 #if WIRELESS_DEMO_TX
     Demo_Print("\r\nWIRELESS V5 F50 LP180 TX211 PROTO=A2 UART=115200 8N1 ESTOP=08 STATUS=03/04\r\n");
 #else

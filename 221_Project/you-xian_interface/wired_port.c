@@ -16,6 +16,8 @@ static uint32_t g_now_ms, g_report_at, g_log_drops;
 static uint8_t g_software_stop;
 static uint8_t g_remote_estop;
 static uint8_t g_output_fault;
+static uint8_t g_restart_wait, g_restart_idle_tracking;
+static uint32_t g_restart_idle_at;
 static uint8_t g_remote_status; /* 03/04 are display states, never execution targets. */
 static uint8_t g_remote_target, g_remote_applied, g_remote_transition, g_remote_settling;
 static uint32_t g_remote_at;
@@ -148,6 +150,7 @@ const char *WiredControl_Error(void)
 const char *WiredControl_StatusLine(void)
 {
     if(WiredControl_Error()) return "wu-xian not connect\r\n";
+    if(g_restart_wait) return "stop model\r\n";
     if(g_remote_estop || g_software_stop) return "stop model\r\n";
     if((g_physical_input.up && g_physical_input.down) ||
        g_wired.reason == WIRED_REASON_CONFLICT) return "error model\r\n";
@@ -198,6 +201,7 @@ void WiredControl_Init(void)
     g_software_stop = 0U;
     g_remote_estop = 0U;
     g_output_fault = 0U;
+    g_restart_wait = 0U; g_restart_idle_tracking = 0U; g_restart_idle_at = 0U;
     g_remote_status = 0U; g_remote_target = 0U; g_remote_applied = 0U;
     g_remote_transition = 0U; g_remote_settling = 0U; g_remote_at = 0U;
     g_log_sink = NULL;
@@ -220,6 +224,14 @@ static void WiredPort_AssertStop(void)
     input = WiredPort_ReadInput();
     WiredLogic_Step(&g_wired, input, WiredPort_Now());
     (void)WiredPort_Apply(&g_wired.output);
+}
+
+void WiredControl_RequireRestartRelease(void)
+{
+    /* Called immediately after Init, before normal processing. Keeping PB11
+     * high here would hide a held wired key and falsely look like release. */
+    g_restart_wait = 1U;
+    g_restart_idle_tracking = 0U;
 }
 
 void WiredControl_SetSoftwareStop(uint8_t active)
@@ -256,6 +268,7 @@ void WiredControl_SetRemoteCommand(uint8_t command)
 {
     WiredInput input;
     uint32_t now;
+    if(g_restart_wait) command = 0U;
     /* Preserve status-only packets for display; never expose their direction
      * bits to execution GPIOs. In particular 03 must NOT become UP+DOWN. */
     g_remote_status = command;
@@ -283,6 +296,24 @@ void WiredControl_Process(void)
     uint32_t now = WiredPort_Now();
     WiredInput input = WiredPort_ReadInput();
     g_physical_input = input;
+    if(g_restart_wait) {
+        /* Do not count startup/inhibit/maintenance loss of feedback as a
+         * release. RF requests remain off, so a held wired key is observable.
+         * No physical E-stop/limit RAW input exists on this board. */
+        if(g_wired.phase != WIRED_IDLE || g_wired.output.inhibit ||
+           input.software_stop || input.up || input.down || input.fast) {
+            g_restart_idle_tracking = 0U;
+        } else if(!g_restart_idle_tracking) {
+            g_restart_idle_tracking = 1U;
+            g_restart_idle_at = now;
+        } else if((uint32_t)(now - g_restart_idle_at) >= WIRED_INPUT_ON_MS) {
+            g_restart_wait = 0U;
+            if(g_log_sink) (void)g_log_sink("RESTART WIRED RELEASED\r\n");
+        }
+        /* This iteration is still neutral. A new press must pass the normal
+         * 10ms assertion filter and relay preparation before KM is allowed. */
+        input.up = 0U; input.down = 0U; input.fast = 0U;
+    }
     if(g_remote_transition && !g_software_stop && !g_remote_estop && !g_wired.output.inhibit &&
        g_wired.phase == WIRED_IDLE) {
         if(!g_remote_settling) {

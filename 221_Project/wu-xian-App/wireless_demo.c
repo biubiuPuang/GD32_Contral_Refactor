@@ -485,6 +485,13 @@ uint8_t WirelessDemo_GetCommand(void)
     return g_demo.action;
 }
 
+uint8_t WirelessDemo_HasFreshStop(void)
+{
+    return (uint8_t)(g_demo.ready && g_config.configured && g_demo.storage_ok &&
+                     g_demo.have_latest && g_demo.latest[5] == WIRELESS_CMD_STOP &&
+                     (u32)(Demo_Now() - g_demo.last_valid) < DEMO_RX_TIMEOUT);
+}
+
 void WirelessDemo_SetRetryAllowed(uint8_t allowed) { g_retry_allowed = (u8)(allowed != 0U); }
 void WirelessDemo_SetMaintenanceHook(void (*hook)(uint8_t active)) { g_maintenance_hook = hook; }
 

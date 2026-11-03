@@ -25,6 +25,10 @@ static uint8_t rf_had_up, rf_had_down;
 static char output[1048576];
 static size_t output_length;
 static unsigned serial_lines;
+static uint32_t reset_flags;
+
+uint32_t rcu_flag_get(uint32_t flag) { return (reset_flags & flag) ? SET : RESET; }
+void rcu_all_reset_flag_clear(void) { reset_flags = 0U; }
 
 static u32 Demo_ReadWord(u32 address)
 {
@@ -212,6 +216,7 @@ static void reset(int clear_flash)
     available = 1; corrupt_readback = stby_fail = rx_fail = overflow = output_fault = 0;
     flags = 0U; status = CMT2300A_STA_STBY; output_length = 0U; output[0] = '\0';
     image_limit = 0x08006000U;
+    reset_flags = RCU_FLAG_PORRST;
     ReceiverApp_Init(); flush_output();
 }
 static void uart_char(u8 c)
@@ -562,8 +567,87 @@ static void test_fifty_channels(void)
     command("HELP");assert(strstr(output,"<CH:0..49>"));
 }
 
+static void restart_with(uint32_t cause, u8 wired_keys)
+{
+    reset(0);
+    reset_flags = cause;
+    wired_up = !!(wired_keys & 1U); wired_down = !!(wired_keys & 2U);
+    wired_fast = !!(wired_keys & 4U);
+    ReceiverApp_Init(); flush_output();
+    assert(reset_flags == 0U);
+}
+
+static void expect_restart_blocked(void)
+{
+    assert(!g_wired.output.allow && !g_wired.output.up &&
+           !g_wired.output.down && !g_wired.output.fast);
+    assert(latch[GPIOB] & GPIO_PIN_6);
+    assert(!(latch[GPIOB] & WIRED_REQUEST_PINS));
+}
+
+static void test_restart_release(void)
+{
+    const uint32_t causes[] = {RCU_FLAG_FWDGTRST, RCU_FLAG_WWDGTRST, RCU_FLAG_SWRST,
+                              RCU_FLAG_PORRST | RCU_FLAG_FWDGTRST};
+    const u8 motions[] = {1U,2U,5U,6U};
+    reset(1); configure(1U,0U);
+    /* Cold power-on retains the old held-key startup for both sources. */
+    for(unsigned i=0U;i<sizeof(motions);++i) {
+        restart_with(RCU_FLAG_PORRST,motions[i]);tick(180U);expect_run(motions[i]);
+        restart_with(RCU_FLAG_PORRST,0U);held(motions[i],300U);expect_run(motions[i]);
+    }
+    for(unsigned c=0U;c<sizeof(causes)/sizeof(causes[0]);++c) {
+        for(unsigned i=0U;i<sizeof(motions);++i) {
+            restart_with(causes[c],motions[i]);tick(600U);expect_restart_blocked();
+            assert(g_restart_wait && !(latch[GPIOB]&GPIO_PIN_11));
+            /* Direction changes/conflict do not count as releasing all keys. */
+            wired_up = wired_down = 1U;tick(30U);expect_restart_blocked();
+            wired_up = wired_down = wired_fast = 0U;service();tick(9U);
+            assert(g_restart_wait);wired_up=1U;service();tick(20U);
+            assert(g_restart_wait);expect_restart_blocked();
+            wired_up=0U;service();tick(10U);assert(!g_restart_wait);
+            tick(100U);expect_restart_blocked();
+            wired_down=1U;tick(41U);expect_run(2U);
+        }
+    }
+    /* Continued RF motion, timeout, malformed STOP and status-only packets
+     * cannot masquerade as a post-reset release. */
+    restart_with(RCU_FLAG_FWDGTRST,0U);held(5U,400U);expect_restart_blocked();
+    assert(g_restart_rf_wait);tick(500U);assert(g_restart_rf_wait);
+    const u8 good=CMT2300A_MASK_PKT_OK_FLG|CMT2300A_MASK_CRC_OK_FLG;
+    inject(2U,0U,WIRELESS_CONTROL_TAG,good);
+    inject(1U,0U,0xA1U,good);
+    inject(1U,0U,WIRELESS_CONTROL_TAG,CMT2300A_MASK_PKT_OK_FLG);
+    held(3U,150U);held(4U,150U);assert(g_restart_rf_wait);
+    held(2U,300U);expect_restart_blocked();
+    /* Radio failure and explicit configuration maintenance also keep it. */
+    rx_fail=1;status=CMT2300A_STA_STBY;service();assert(g_restart_rf_wait);
+    rx_fail=0;tick(1100U);configure(1U,0U);tick(200U);
+    assert(g_restart_rf_wait);held(1U,250U);expect_restart_blocked();
+    /* ESTOP must work even before either release interlock is cleared. */
+    valid(8U);expect_estop();held(8U,200U);expect_estop();
+    tick(100U);assert(g_restart_rf_wait && !g_remote_estop);
+    held(1U,250U);expect_restart_blocked();
+    valid(0U);assert(!g_restart_rf_wait);held(6U,300U);expect_run(6U);
+    /* Waiting for an offline remote must not disable newly pressed wired keys. */
+    restart_with(RCU_FLAG_SWRST,0U);tick(200U);
+    assert(!g_restart_wait && g_restart_rf_wait);wired_up=1U;tick(41U);expect_run(1U);
+    /* A remote release does not clear a held wired key or maintenance/fault. */
+    restart_with(RCU_FLAG_FWDGTRST,1U);tick(200U);valid(0U);
+    assert(g_restart_wait && !g_restart_rf_wait);held(5U,200U);expect_restart_blocked();
+    wired_up=0U;service();tick(10U);WiredControl_SetSoftwareStop(1U);
+    valid(0U);tick(200U);assert(g_software_stop && !g_wired.output.allow);
+    /* Release confirmation remains correct across TIMER13's uint32 wrap. */
+    restart_with(RCU_FLAG_FWDGTRST,1U);tick(200U);
+    g_now_ms=UINT32_MAX-5U;wired_up=0U;service();tick(9U);assert(g_restart_wait);
+    tick(1U);assert(!g_restart_wait);wired_up=1U;tick(41U);expect_run(1U);
+    assert(strstr(output,"RESET FWDGT WAIT RELEASE\r\n"));
+    puts("PASS restart: watchdog/software flags, cold held-key startup unchanged, held wired/RF blocked, release debounce/repress, invalid/expired/fault STOP rejected, ESTOP priority, independent maintenance, wired without RF, rollover.");
+}
+
 int main(void)
 {
+    test_restart_release();
     test_fifty_channels();
     test_wired_and_radio_absence(); test_motion_and_stops(); test_timeout_filter_and_feedback();
     test_faults_maintenance_and_uart(); test_wireless_estop(); test_storage_and_rollover();

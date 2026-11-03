@@ -25,6 +25,12 @@ void timer_enable(uint32_t timer);
 uint32_t timer_counter_read(uint32_t timer);
 #define RESET 0U
 #define SET 1U
+#define RCU_FLAG_FWDGTRST (1U << 29)
+#define RCU_FLAG_WWDGTRST (1U << 30)
+#define RCU_FLAG_SWRST (1U << 28)
+#define RCU_FLAG_PORRST (1U << 27)
+uint32_t rcu_flag_get(uint32_t flag);
+void rcu_all_reset_flag_clear(void);
 #define RCU_GPIOA 5U
 #define GPIOA 6U
 #define RCU_GPIOB 7U

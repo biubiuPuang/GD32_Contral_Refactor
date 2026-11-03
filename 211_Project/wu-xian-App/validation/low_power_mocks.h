@@ -14,6 +14,9 @@ static unsigned lp_tc_delay_reads, lp_tc_low_observed;
 static int lp_tc_stall_after_entry;
 static uint64_t lp_elapsed_us, lp_last_feed_us;
 uint32_t SystemCoreClock = 72000000U;
+static uint32_t reset_flags;
+uint32_t rcu_flag_get(uint32_t flag) { return (reset_flags & flag) ? SET : RESET; }
+void rcu_all_reset_flag_clear(void) { reset_flags = 0U; }
 
 static void lp_dispatch_pending(void)
 {
@@ -41,6 +44,7 @@ static void lp_drain_key_event(void)
 
 static void lp_reset(void)
 {
+    reset_flags=RCU_FLAG_PORRST;
     lp_auto_pump=lp_timer_running=lp_uart_enabled=lp_rx_irq=0;
     lp_tc_ready=1;lp_clock_source=RCU_SCSS_PLL;
     lp_rtc_fail=lp_osc_fail=lp_clock_switch_fail=lp_radio_sleep_fail=0;

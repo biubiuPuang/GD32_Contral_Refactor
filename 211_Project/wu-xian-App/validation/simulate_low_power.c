@@ -222,6 +222,7 @@ int main(void)
     puts("RUN: UART regression");check_uart_and_faults();
     puts("RUN: key regression");check_button();
     puts("RUN: E-stop regression");check_estop();
+    puts("RUN: restart release regression");check_restart_release();
     puts("RUN: log regression");check_snapshot_logs();
     check_complete_irq_configuration();check_idle_timing_and_all_inputs();
     check_entry_guards();check_sleep_and_each_wake_input();

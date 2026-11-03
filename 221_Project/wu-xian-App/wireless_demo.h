@@ -22,6 +22,8 @@ void WirelessDemo_Process(void);
 void WirelessDemo_ReportProcess(void); /* Call after execution update. */
 /* STOP if fault, unpaired or >=85ms old; E-stop also expires (not latched). */
 uint8_t WirelessDemo_GetCommand(void);
+/* True only for a fresh, validated STOP packet, never a timeout/fault STOP. */
+uint8_t WirelessDemo_HasFreshStop(void);
 uint8_t WirelessDemo_Log(const char *line); /* Complete nonblocking UART line. */
 void WirelessDemo_SetRetryAllowed(uint8_t allowed);
 /* Pause physical execution around explicit SET/DEFAULT maintenance, including

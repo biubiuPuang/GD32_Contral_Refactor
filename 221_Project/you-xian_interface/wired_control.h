@@ -52,6 +52,10 @@ const char *WiredLogic_ModeName(const WiredLogic *logic);
  * Use ReceiverApp_Init/Process for the integrated wireless application. */
 void WiredControl_Init(void);
 void WiredControl_Process(void);
+/* Abnormal restart only: deny KM/relay execution until the observable wired
+ * keys are released for 10ms after the input circuit has settled. PB11 must
+ * still be allowed to power that circuit; it is NOT this release interlock. */
+void WiredControl_RequireRestartRelease(void);
 void WiredControl_SetSoftwareStop(uint8_t active);
 /* Wireless E-stop is an independent inhibit reason. Clear only this reason
  * on valid release, RF expiry/fault or reboot; never clear maintenance/faults.
