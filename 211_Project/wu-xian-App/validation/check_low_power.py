@@ -35,6 +35,7 @@ def check_project_and_parameters():
     check_sender.parameters()
     main = (ROOT / "211_Project/User/main.c").read_text(encoding="utf-8")
     assert main.index("Demo_LowPowerProcess();") < main.index("Demo_WatchdogFeed();")
+    assert main.index("Demo_ReportIfDue();") < main.index("Demo_LedProcess();") < main.index("Demo_LowPowerProcess();")
     assert "fwdgt_enable();" in main
     files = ET.parse(PROJECT).findall(".//File[FileName='wireless_demo.c']")
     assert len(files) == 1
@@ -95,6 +96,10 @@ def main():
     summary = build()
     assert before == protected_snapshot(), "A protected file changed during validation"
     summary.update({"version": "V5 F50 LP180", "idle_seconds": 180,
+                    "led": {"pin": "PB9", "active_low": True, "idle": "ON",
+                            "sending_toggle_ms": 500, "alert_toggle_ms": 200,
+                            "alerts": ["ESTOP", "UNCONFIGURED", "RADIO_FAULT", "KEY_CONFLICT"],
+                            "sleep": "OFF", "immediate_toggle_on_sending_entry": True},
                     "wake_inputs": ["PB3", "PB4", "PB5", "PB6", "PA8", "PA9", "PA10"],
                     "rtc_interval_seconds_nominal": 1, "simulated_sleep_seconds": 3600,
                     "hardware_accessed": False, "board_flashed": False,

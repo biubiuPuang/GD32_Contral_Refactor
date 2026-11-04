@@ -8,6 +8,8 @@
  * Init configures the existing SysTick delay BSP, USART1 and TIMER2;
  * the TX board configures active-low PA9/PA10 (DOWN), PB3/PB4 (UP),
  * PB5/PB6 (FAST), PA8 (active-low wireless E-stop) inputs with pull-ups.
+ * PB9 drives an active-low LED: idle ON, sending toggles every 500ms,
+ * E-stop/unconfigured/radio fault/key conflict toggles every 200ms; sleep OFF.
  * Either direction/speed key stage means that key is held.
  * Application owns USART1_IRQHandler for buffered RX and nonblocking log TX,
  * plus RTC/EXTI17 and key EXTI3/4/5/6/8/9/10 for LP180 deep sleep.
@@ -49,6 +51,10 @@ void Demo_ButtonProcess(void);
 BOOL Demo_RadioCheckAndRetry(void);
 void Demo_TxProcess(void);
 void Demo_ReportIfDue(void);
+/* Project LED task: call after radio/TX processing and before low power.
+ * Nonblocking; entering sending/alert mode toggles the LED immediately.
+ */
+void Demo_LedProcess(void);
 /* Call LowPowerProcess after reporting and before feeding the enabled FWDGT.
  * It stays in deep sleep until any of the seven key inputs wakes it.
  */

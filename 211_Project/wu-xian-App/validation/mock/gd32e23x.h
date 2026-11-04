@@ -41,7 +41,11 @@ void rcu_all_reset_flag_clear(void);
 #define GPIO_PIN_9 (1U << 9)
 #define GPIO_PIN_10 (1U << 10)
 #define GPIO_MODE_INPUT 0U
+#define GPIO_MODE_OUTPUT 1U
+#define GPIO_PUPD_NONE 0U
 #define GPIO_PUPD_PULLUP 1U
+#define GPIO_OTYPE_PP 0U
+#define GPIO_OSPEED_2MHZ 0U
 #define USART_FLAG_ORERR 0U
 #define USART_FLAG_FERR 1U
 #define USART_FLAG_NERR 2U
@@ -154,6 +158,10 @@ void __disable_irq(void);
 void __enable_irq(void);
 void nvic_irq_enable(uint32_t irq, uint32_t priority);
 void gpio_mode_set(uint32_t port, uint32_t mode, uint32_t pull, uint32_t pins);
+void gpio_output_options_set(uint32_t port, uint8_t type, uint32_t speed, uint32_t pins);
+void gpio_bit_set(uint32_t port, uint32_t pins);
+void gpio_bit_reset(uint32_t port, uint32_t pins);
+void gpio_bit_toggle(uint32_t port, uint32_t pins);
 uint32_t gpio_input_bit_get(uint32_t port, uint32_t pin);
 uint16_t gpio_input_port_get(uint32_t port);
 uint32_t usart_flag_get(uint32_t port, uint32_t flag);

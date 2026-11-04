@@ -25,6 +25,8 @@ static uint32_t flash[512],image_limit;
 static unsigned flash_writes,flash_erases,program_calls;
 static int flash_unlocked,fail_program,fail_erase;
 static int tx_irq;
+static int led_high, led_output_ready, led_options_ready;
+static unsigned led_toggles;
 #include "low_power_mocks.h"
 
 static u32 Demo_ReadWord(u32 address)
@@ -83,10 +85,27 @@ uint32_t timer_counter_read(uint32_t t)
 }
 void gpio_mode_set(uint32_t port,uint32_t mode,uint32_t pull,uint32_t p)
 {
+    if(mode==GPIO_MODE_OUTPUT) {
+        assert(port==GPIOB && (gpio_clock&2) && p==GPIO_PIN_9 && pull==GPIO_PUPD_NONE);
+        assert(led_options_ready && led_high); /* Preload OFF before output mode. */
+        led_output_ready=1;return;
+    }
     assert(mode==GPIO_MODE_INPUT && pull==GPIO_PUPD_PULLUP);
     if(port==GPIOA) assert((gpio_clock&1) && p==(GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10));
     else assert(port==GPIOB && (gpio_clock&2) && p==(GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6));
 }
+void gpio_output_options_set(uint32_t port,uint8_t type,uint32_t speed,uint32_t p)
+{
+    assert(port==GPIOB && (gpio_clock&2) && p==GPIO_PIN_9);
+    assert(type==GPIO_OTYPE_PP && speed==GPIO_OSPEED_2MHZ);
+    led_options_ready=1;
+}
+void gpio_bit_set(uint32_t port,uint32_t p)
+{ assert(port==GPIOB && (gpio_clock&2) && p==GPIO_PIN_9);led_high=1; }
+void gpio_bit_reset(uint32_t port,uint32_t p)
+{ assert(port==GPIOB && (gpio_clock&2) && p==GPIO_PIN_9 && led_output_ready);led_high=0; }
+void gpio_bit_toggle(uint32_t port,uint32_t p)
+{ assert(port==GPIOB && (gpio_clock&2) && p==GPIO_PIN_9 && led_output_ready);led_high=!led_high;++led_toggles; }
 uint32_t gpio_input_bit_get(uint32_t port,uint32_t p) { assert(port==GPIOA);return pins&p?SET:RESET; }
 uint16_t gpio_input_port_get(uint32_t port)
 { assert((port==GPIOA && (gpio_clock&1)) || (port==GPIOB && (gpio_clock&2)));return (uint16_t)pins; }
@@ -168,6 +187,7 @@ static void reset(int clear_flash)
     counter=0;output_length=0;output[0]=0;
     bank_bytes=fifo_reads=fifo_writes=rx_starts=init_calls=0;
     timer_clock_enabled=gpio_clock=systick_ready=corrupt_readback=0;
+    led_high=led_output_ready=led_options_ready=0;led_toggles=0;
     rx_fail=overflow=done=fifo_selected=fifo_cleared=stby_fail=0;
     available=1;flags=0;status=CMT2300A_STA_STBY;
     pins=GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;irq_mask=0;

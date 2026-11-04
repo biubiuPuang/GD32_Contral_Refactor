@@ -11,6 +11,7 @@
 - 串口完整命令、输出队列处理完后，打印一次`input sleep model\r\n`，等待最后一个停止位发完。
 - 复用现有`CMT2300A_GoSleep()`让无线芯片休眠，再调用GD32官方深度睡眠接口。
 - 深睡期间暂停TIMER2和USART1。RTC使用IRC40K，名义每秒唤醒一次，只在主循环上下文喂狗，不打印进入/退出日志。
+- PB9低有效LED在暂停TIMER2前输出高电平灭灯，整个深睡和RTC喂狗期间保持灭灯；按键唤醒、时钟及无线恢复后更新清醒灯效。详见[LED指示](README.md#pb9-led-指示)。
 - 任意按键唤醒后恢复内部晶振PLL 72MHz、BSP延时、TIMER2、USART1和无线STBY，打印一次`exit sleep model\r\n`。
 - 后续按原有10ms消抖和急停优先规则发送当前状态；短于消抖时间的按键可以唤醒，但不保证形成控制命令。
 - 休眠后串口配置需要先按键唤醒，再发送GET/SET等命令。
@@ -20,7 +21,7 @@
 ## 初始化与调用
 
 `WirelessDemo_Init()`开启GPIOA、GPIOB、SYSCFG、PMU、RTC等时钟并初始化按键唤醒和RTC。
-原main.c继续启用约2秒FWDGT，在主循环末尾依次调用`Demo_LowPowerProcess()`和`Demo_WatchdogFeed()`。
+原main.c继续启用约2秒FWDGT，在主循环末尾依次调用`Demo_LedProcess()`、`Demo_LowPowerProcess()`和`Demo_WatchdogFeed()`。
 正常运行每10ms喂狗一次；休眠中每次喂狗前后各等1ms，满足低速时钟域同步要求。
 `Demo_LowPowerProcess()`必须从中断已开启、FWDGT已启用的主循环调用。
 低功耗应用逻辑放在wu-xian-App，原无线BSP和官方库保持原样。

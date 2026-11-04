@@ -121,6 +121,7 @@ void pmu_to_deepsleepmode(uint32_t ldo,uint8_t command)
 {
     assert(ldo==PMU_LDO_LOWPOWER && command==WFI_CMD && irq_mask);
     assert(!lp_timer_running && !lp_uart_enabled && !lp_rx_irq && !tx_irq);
+    assert(led_output_ready && led_high); /* LED stays OFF on every RTC re-entry. */
     assert(!lp_tc_delay_reads);
 #if WIRELESS_DEMO_TX
     assert(!g_radio_initialized || status==CMT2300A_STA_SLEEP);

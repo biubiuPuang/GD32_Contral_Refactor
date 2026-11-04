@@ -1,11 +1,26 @@
 {
   "errors": 0,
   "warnings": 0,
-  "program_size": "Program Size: Code=20476 RO-data=924 RW-data=4 ZI-data=1892  \r",
-  "hex_end_exclusive": "0x80053a0",
-  "hex_sha256": "519fdc3b0f20a52940a66a4d40c1e6168ebc1659e8943275d959bb806b3a6bbd",
+  "program_size": "Program Size: Code=21084 RO-data=932 RW-data=4 ZI-data=1908  \r",
+  "hex_end_exclusive": "0x8005608",
+  "hex_sha256": "21fb609041001e3d5f0d29cbb28ffa1565b9d6dad94de69d55583fc87080582a",
   "version": "V5 F50 LP180",
   "idle_seconds": 180,
+  "led": {
+    "pin": "PB9",
+    "active_low": true,
+    "idle": "ON",
+    "sending_toggle_ms": 500,
+    "alert_toggle_ms": 200,
+    "alerts": [
+      "ESTOP",
+      "UNCONFIGURED",
+      "RADIO_FAULT",
+      "KEY_CONFLICT"
+    ],
+    "sleep": "OFF",
+    "immediate_toggle_on_sending_entry": true
+  },
   "wake_inputs": [
     "PB3",
     "PB4",
@@ -27,7 +42,11 @@
     "RUN: UART regression",
     "RUN: key regression",
     "RUN: E-stop regression",
+    "RUN: restart release regression",
+    "PASS sender restart: cold held-key startup, watchdog/software release gate, both contacts, direction/FAST/conflict, debounce, ESTOP priority, config, wrap.",
     "RUN: log regression",
+    "PASS LED: active-low PB9, clock/preload/output setup, idle/STOP tail, immediate send, 500ms/200ms boundaries, E-stop/conflict/fault/unconfigured priority and recovery",
+    "PASS LED: hardware/software timer wrap, cancelled sleep keeps indication, wake radio fault restores alert; all sleep/RTC entries keep LED OFF",
     "PASS: every key mapping/IRQ and RTC EXTI17 configuration",
     "PASS: 180s threshold, all seven held/released inputs, wrap and latched short pulse",
     "PASS: no sleep with held key, active TX/STOP, RTC/radio fault, UART command or masked IRQ",
@@ -39,8 +58,8 @@
     "LOW POWER sender tests PASS; no hardware accessed."
   ],
   "sources": {
-    "211_Project\\wu-xian-App\\wireless_demo.c": "517e3336e3a5423f51cab2eb7e820c475431e62037a6d343287ec16936e34c8a",
-    "211_Project\\wu-xian-App\\wireless_demo.h": "ea3c9e6650e714a691b869965e5740aee2e73e3a5a46997189afce90e27fcd4e",
-    "211_Project\\User\\main.c": "db4c0d404939ba3ce97bff29cac1e9382c9e964247b43018f93d156e5d56eff5"
+    "211_Project\\wu-xian-App\\wireless_demo.c": "782031ae71f75583302dac3c67b5546829d1723ec6163aa713f5350a9d28084d",
+    "211_Project\\wu-xian-App\\wireless_demo.h": "811f50c891834596601aeaed3a33b4cd960a3a25c411bc8ced0b448fc207256d",
+    "211_Project\\User\\main.c": "554246a6b69010f4a46d54b3e2ec0315f7f96d4bfa531ca297725ead11ccfebb"
   }
 }

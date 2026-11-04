@@ -27,6 +27,8 @@
 #define DEMO_TX_TIMEOUT 700U
 #define DEMO_RETRY_TICKS 10000U
 #define DEMO_PRINT_TICKS 10000U /* 1000ms, TIMER2=10kHz */
+#define DEMO_LED_TX_TICKS 5000U /* 500ms翻转一次 */
+#define DEMO_LED_ALERT_TICKS 2000U /* 200ms翻转一次 */
 /*--------------低功耗开始-----------------*/
 // 计算方法：等待秒数 × 10000。
 #define DEMO_IDLE_TICKS 1800000UL /* 180秒，计时频率10kHz */
@@ -48,12 +50,17 @@
 #define DEMO_UART_TX_SIZE 512U
 
 typedef struct { u32 id, channel, configured; } Demo_Config;
+typedef enum {
+    DEMO_LED_IDLE, DEMO_LED_TX, DEMO_LED_ALERT, DEMO_LED_SLEEP
+} Demo_LedMode;
 static Demo_Config g_config;
 static struct {
     u16 previous_timer, sequence;
     u32 ticks, report_at, retry_at, started_at, last_valid;
     u32 total, window, errors, next_at, random, button_since[3], conflict_since, log_drops;
     u32 estop_since;
+    u32 led_at;
+    Demo_LedMode led_mode;
     u32 saved_address, saved_generation;
     u8 pending[8], latest[8], line[64];
     u8 line_size, discard, button_raw, button_bits, button_command, button_conflict, action, stops_left;
@@ -144,6 +151,36 @@ static void Demo_TimerInit(void)
     timer_init(TIMER2, &timer);
     timer_counter_value_config(TIMER2, 0U);
     timer_enable(TIMER2);
+}
+
+/* 项目自定义函数：PB9低电平点亮，复用官方GPIO库和现有10kHz时基。
+ * 使用按键命令保持发送灯效，不跟随每个无线包的busy状态闪烁。
+ */
+void Demo_LedProcess(void)
+{
+    Demo_LedMode mode;
+    u32 interval, now = Demo_Now();
+    if(!g_config.configured || !g_demo.storage_ok || !g_demo.ready ||
+       g_demo.estop_pressed || g_demo.button_conflict ||
+       g_demo.button_command == WIRELESS_CMD_CONFLICT) {
+        mode = DEMO_LED_ALERT;
+        interval = DEMO_LED_ALERT_TICKS;
+    } else if(g_demo.button_command != WIRELESS_CMD_STOP) {
+        mode = DEMO_LED_TX;
+        interval = DEMO_LED_TX_TICKS;
+    } else {
+        /* 无按键时常亮，松键后的三个STOP尾包不延长发送灯效。 */
+        gpio_bit_reset(GPIOB, GPIO_PIN_9);
+        g_demo.led_mode = DEMO_LED_IDLE;
+        g_demo.led_at = now;
+        return;
+    }
+    /* 进入发送/异常状态立即翻转，之后按各自周期非阻塞翻转。 */
+    if(g_demo.led_mode != mode || (u32)(now - g_demo.led_at) >= interval) {
+        gpio_bit_toggle(GPIOB, GPIO_PIN_9);
+        g_demo.led_at = now;
+    }
+    g_demo.led_mode = mode;
 }
 
 /* USART1 is initialized by existing BSP, including GPIO/peripheral clocks.
@@ -706,6 +743,9 @@ void Demo_LowPowerProcess(void)
     usart_interrupt_disable(BSP_USART, USART_INT_TBE);
     usart_disable(BSP_USART);
     NVIC_ClearPendingIRQ(USART1_IRQn);
+    /* 深睡前灭灯；RTC仅喂狗，不改变PB9电平。 */
+    gpio_bit_set(GPIOB, GPIO_PIN_9);
+    g_demo.led_mode = DEMO_LED_SLEEP;
     (void)Demo_Now();
     timer_disable(TIMER2);
     timer_stopped = TRUE;
@@ -744,6 +784,7 @@ resume:
         usart_interrupt_enable(BSP_USART, USART_INT_RBNE);
     }
     if(radio_asleep && !CMT2300A_GoStby()) (void)Demo_Fail("WAKE_STBY");
+    Demo_LedProcess();
     now = Demo_Now();
     g_idle_since = now;
     g_idle_ready = FALSE;
@@ -841,6 +882,10 @@ void WirelessDemo_Init(void)
 #if WIRELESS_DEMO_TX
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
+    /* 先开启GPIOB时钟、预置高电平灭灯，再配置PB9推挽输出。 */
+    gpio_bit_set(GPIOB, GPIO_PIN_9);
+    gpio_output_options_set(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, GPIO_PIN_9);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_9);
     gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10);
     gpio_mode_set(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6);
     g_demo.estop_raw = (u8)(gpio_input_bit_get(GPIOA, GPIO_PIN_8) == RESET);
@@ -912,6 +957,7 @@ void WirelessDemo_Init(void)
     g_idle_tracking = TRUE;
     g_watchdog_at = g_demo.report_at;
     /*----------低功耗结束----------------*/
+    Demo_LedProcess();
 }
 /* Check configuration and recover the radio without delaying the main loop. */
 BOOL Demo_RadioCheckAndRetry(void)
@@ -955,6 +1001,7 @@ void WirelessDemo_Process(void)
 #endif
     }
     Demo_ReportIfDue();
+    Demo_LedProcess();
     Demo_LowPowerProcess();
 }
 /*-----------------------低功耗开始----------------------*/

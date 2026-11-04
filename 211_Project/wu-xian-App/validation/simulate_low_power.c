@@ -104,7 +104,9 @@ static void check_sleep_and_each_wake_input(void)
         lp_prepare();lp_wake_pin=lp_keys[i];
         u16 saved_counter=counter;
         unsigned saved_packets=fifo_writes;
+        unsigned saved_toggles=led_toggles;
         Demo_LowPowerProcess();flush_output();
+        assert(!led_high && led_toggles==saved_toggles);
         assert(lp_sleep_calls==4 && lp_rtc_events==3 && lp_feed_calls==4);
         assert(lp_occurrences("input sleep model\r\n")==1);
         assert(lp_occurrences("exit sleep model\r\n")==1);
@@ -119,6 +121,9 @@ static void check_sleep_and_each_wake_input(void)
             (lp_keys[i]&(GPIO_PIN_3|GPIO_PIN_4))?WIRELESS_CMD_UP:
             (lp_keys[i]&(GPIO_PIN_5|GPIO_PIN_6))?WIRELESS_CMD_FAST:WIRELESS_CMD_DOWN;
         assert(g_demo.button_command==expected);
+        Demo_LedProcess();
+        assert(led_high && g_demo.led_mode==
+               (expected==WIRELESS_CMD_ESTOP?DEMO_LED_ALERT:DEMO_LED_TX));
         Demo_TxProcess();assert(g_demo.busy && packet[5]==expected);
     }
     puts("PASS: all seven inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command");
@@ -180,7 +185,9 @@ static void check_unpaired_sleep(void)
     reset(1);advance(101U);lp_clear_output();
     assert(!g_config.configured && !g_radio_initialized && !init_calls);
     g_idle_ready=TRUE;lp_auto_pump=1;lp_short_key=1;
+    unsigned saved_toggles=led_toggles;
     Demo_LowPowerProcess();flush_output();
+    assert(!led_high && led_toggles==saved_toggles+1U && g_demo.led_mode==DEMO_LED_ALERT);
     assert(lp_sleep_calls==4 && !g_config.configured && !g_demo.ready && !init_calls);
     assert(lp_occurrences("exit sleep model\r\n")==1);
     lp_prepare();command("DEFAULT");lp_clear_output();
@@ -213,6 +220,81 @@ static void check_watchdog_and_failure_paths(void)
     puts("PASS: virtual hour of RTC feeds, no feed on spurious wake, radio/RTC/PLL failures and reload spacing");
 }
 
+static void check_led_states_and_timing(void)
+{
+    /* Fresh/unconfigured board alerts even with every key released. */
+    reset(1);assert(led_output_ready && !led_high);
+    unsigned toggles=led_toggles;
+    log_ticks(1999U);assert(!led_high && led_toggles==toggles);
+    log_ticks(1U);assert(led_high && led_toggles==toggles+1U);
+    log_ticks(2000U);assert(!led_high && led_toggles==toggles+2U);
+
+    configure(1U,0U);drain_stops();assert(!led_high);
+    toggles=led_toggles;log_ticks(10000U);
+    assert(!led_high && led_toggles==toggles); /* Idle stays ON. */
+    keys(GPIO_PIN_3);assert(led_high && led_toggles==toggles+1U);
+    toggles=led_toggles;
+    log_ticks(4999U);assert(led_high && led_toggles==toggles);
+    log_ticks(1U);assert(!led_high && led_toggles==toggles+1U);
+    log_ticks(5000U);assert(led_high && led_toggles==toggles+2U);
+    keys(0);assert(!led_high && g_demo.stops_left); /* Release overrides STOP tail. */
+    drain_stops();
+    keys(GPIO_PIN_5);assert(led_high && g_demo.led_mode==DEMO_LED_TX);
+    keys(0);drain_stops(); /* FAST-only status uses normal sending indication. */
+
+    /* E-stop wins over motion and changes to the 200ms period immediately. */
+    keys(GPIO_PIN_3);assert(led_high);
+    toggles=led_toggles;keys(GPIO_PIN_3|GPIO_PIN_8);
+    assert(!led_high && led_toggles==toggles+1U);
+    toggles=led_toggles;
+    log_ticks(1999U);assert(!led_high && led_toggles==toggles);
+    log_ticks(1U);assert(led_high && led_toggles==toggles+1U);
+    keys(GPIO_PIN_3);assert(!led_high && g_demo.led_mode==DEMO_LED_TX);
+    keys(0);drain_stops();
+
+    /* Direction conflict is detected on the first raw sample. */
+    keys(GPIO_PIN_3);assert(led_high);
+    toggles=led_toggles;pins&=~GPIO_PIN_9;advance(1U);
+    assert(!led_high && led_toggles==toggles+1U);
+    toggles=led_toggles;
+    log_ticks(1999U);assert(!led_high && led_toggles==toggles);
+    log_ticks(1U);assert(led_high && led_toggles==toggles+1U);
+    keys(0);drain_stops();assert(!led_high);
+
+    /* A real TX timeout alerts, including after all keys are released. */
+    keys(GPIO_PIN_3);available=0;advance(700U);
+    assert(!g_demo.ready && !strcmp(g_demo.error,"TX_TIMEOUT"));
+    keys(0);assert(g_demo.led_mode==DEMO_LED_ALERT);
+    int level=led_high;toggles=led_toggles;
+    log_ticks(2000U);assert(led_high!=level && led_toggles==toggles+1U);
+    available=1;log_ticks(10000U);
+    assert(g_demo.ready && !led_high && g_demo.led_mode==DEMO_LED_IDLE);
+    command("DEFAULT");assert(g_demo.led_mode==DEMO_LED_ALERT);
+    puts("PASS LED: active-low PB9, clock/preload/output setup, idle/STOP tail, immediate send, 500ms/200ms boundaries, E-stop/conflict/fault/unconfigured priority and recovery");
+}
+
+static void check_led_wrap_and_sleep_abort(void)
+{
+    reset(1);configure(1U,0U);drain_stops();
+    counter=65520U;g_demo.previous_timer=counter;g_demo.ticks=UINT32_MAX-1000U;
+    keys(GPIO_PIN_3);assert(led_high);
+    log_ticks(4999U);assert(led_high);
+    log_ticks(1U);assert(!led_high);
+    /* Alert period itself crosses the 32-bit software clock wrap. */
+    reset(1);g_demo.ticks=UINT32_MAX-1000U;
+    g_idle_since=g_demo.ticks;
+    g_demo.previous_timer=counter;g_demo.led_mode=DEMO_LED_IDLE;
+    Demo_LedProcess();int level=led_high;
+    log_ticks(1999U);assert(led_high==level);
+    log_ticks(1U);assert(led_high!=level);
+
+    lp_prepare();lp_drain_key_after=4;
+    Demo_LowPowerProcess();assert(!lp_sleep_calls && !led_high);
+    lp_prepare();lp_wake_stby_fail=1;
+    Demo_LowPowerProcess();assert(!g_demo.ready && g_demo.led_mode==DEMO_LED_ALERT && !led_high);
+    puts("PASS LED: hardware/software timer wrap, cancelled sleep keeps indication, wake radio fault restores alert; all sleep/RTC entries keep LED OFF");
+}
+
 int main(void)
 {
     setvbuf(stdout,NULL,_IONBF,0);
@@ -224,6 +306,7 @@ int main(void)
     puts("RUN: E-stop regression");check_estop();
     puts("RUN: restart release regression");check_restart_release();
     puts("RUN: log regression");check_snapshot_logs();
+    check_led_states_and_timing();check_led_wrap_and_sleep_abort();
     check_complete_irq_configuration();check_idle_timing_and_all_inputs();
     check_entry_guards();check_sleep_and_each_wake_input();
     check_short_wake_and_races();check_uart_completion_and_repeated_sessions();
