@@ -4,7 +4,7 @@
 #undef main
 
 static const u32 lp_keys[] = {
-    GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6,
+    GPIO_PIN_3, GPIO_PIN_4,
     GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10
 };
 
@@ -57,13 +57,17 @@ static void check_idle_timing_and_all_inputs(void)
     /* A completed short pulse is still activity even if GPIO is high now. */
     lp_exti_pending|=EXTI_3;lp_dispatch_pending();assert(g_key_wakeup);
     Demo_ButtonProcess();assert(!g_idle_ready && !g_key_wakeup);
-    puts("PASS: 180s threshold, all seven held/released inputs, wrap and latched short pulse");
+    /* Removed PB5/PB6 inputs neither block sleep nor restart the idle timer. */
+    pins&=~(GPIO_PIN_5|GPIO_PIN_6);Demo_ButtonProcess();
+    assert(!Demo_AnyKeyPressed() && !g_idle_ready);
+    lp_advance_idle(DEMO_IDLE_TICKS);assert(g_idle_ready);
+    puts("PASS: 180s threshold, all five held/released inputs, ignored PB5/PB6, wrap and latched short pulse");
 }
 
 static void check_complete_irq_configuration(void)
 {
     reset(1);
-    u32 mask=EXTI_3|EXTI_4|EXTI_5|EXTI_6|EXTI_8|EXTI_9|EXTI_10;
+    u32 mask=EXTI_3|EXTI_4|EXTI_8|EXTI_9|EXTI_10;
     assert(lp_exti_enabled==(mask|EXTI_17));
     assert(lp_exti_falling==mask && lp_exti_rising==EXTI_17);
     for(unsigned i=0;i<sizeof(lp_keys)/sizeof(lp_keys[0]);++i) {
@@ -118,15 +122,14 @@ static void check_sleep_and_each_wake_input(void)
         assert(g_key_wakeup);Demo_ButtonProcess();
         counter=(u16)(counter+101U);Demo_ButtonProcess();
         u8 expected=lp_keys[i]==GPIO_PIN_8?WIRELESS_CMD_ESTOP:
-            (lp_keys[i]&(GPIO_PIN_3|GPIO_PIN_4))?WIRELESS_CMD_UP:
-            (lp_keys[i]&(GPIO_PIN_5|GPIO_PIN_6))?WIRELESS_CMD_FAST:WIRELESS_CMD_DOWN;
+            (lp_keys[i]&(GPIO_PIN_3|GPIO_PIN_4))?WIRELESS_CMD_UP:WIRELESS_CMD_DOWN;
         assert(g_demo.button_command==expected);
         Demo_LedProcess();
         assert(led_high && g_demo.led_mode==
                (expected==WIRELESS_CMD_ESTOP?DEMO_LED_ALERT:DEMO_LED_TX));
         Demo_TxProcess();assert(g_demo.busy && packet[5]==expected);
     }
-    puts("PASS: all seven inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command");
+    puts("PASS: all five inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command");
 }
 
 static void check_short_wake_and_races(void)
@@ -239,8 +242,9 @@ static void check_led_states_and_timing(void)
     log_ticks(5000U);assert(led_high && led_toggles==toggles+2U);
     keys(0);assert(!led_high && g_demo.stops_left); /* Release overrides STOP tail. */
     drain_stops();
-    keys(GPIO_PIN_5);assert(led_high && g_demo.led_mode==DEMO_LED_TX);
-    keys(0);drain_stops(); /* FAST-only status uses normal sending indication. */
+    keys(GPIO_PIN_3|GPIO_PIN_4);assert(led_high && g_demo.led_mode==DEMO_LED_TX);
+    keys(0);drain_stops(); /* Deep press uses normal sending indication. */
+    keys(GPIO_PIN_5|GPIO_PIN_6);assert(!led_high && g_demo.led_mode==DEMO_LED_IDLE);
 
     /* E-stop wins over motion and changes to the 200ms period immediately. */
     keys(GPIO_PIN_3);assert(led_high);
@@ -303,6 +307,7 @@ int main(void)
     puts("RUN: Flash regression");check_power_loss();
     puts("RUN: UART regression");check_uart_and_faults();
     puts("RUN: key regression");check_button();
+    puts("RUN: two-stage speed regression");check_two_stage_speed();
     puts("RUN: E-stop regression");check_estop();
     puts("RUN: restart release regression");check_restart_release();
     puts("RUN: log regression");check_snapshot_logs();

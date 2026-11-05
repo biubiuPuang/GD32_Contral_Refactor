@@ -1,7 +1,8 @@
 #define WIRELESS_DEMO_TX 1
 
 /* TX application over existing GD32 BSP and CMOSTEK radio drivers.
- * Three two-stage keys plus PA8 E-stop, protocol A2. Both current firmware
+ * Two two-stage direction keys plus PA8 E-stop, protocol A2. Deep press adds
+ * FAST to the corresponding direction. Both current firmware
  * images are required for wireless E-stop; old receivers reject command 08.
  */
 #include "wireless_demo.h"
@@ -23,6 +24,9 @@
 #define DEMO_NODE_SIZE 4U
 #define DEMO_DATA_SIZE 4U
 #define DEMO_DEBOUNCE_TICKS 100U /* 10 ms, both edges */
+/* Internal key-state bits; keep speed qualified separately for each direction. */
+#define DEMO_KEY_UP_FAST 0x04U
+#define DEMO_KEY_DOWN_FAST 0x08U
 #define DEMO_RX_TIMEOUT 850U /* 85 ms from latest valid control packet */
 #define DEMO_TX_TIMEOUT 700U
 #define DEMO_RETRY_TICKS 10000U
@@ -57,7 +61,7 @@ static Demo_Config g_config;
 static struct {
     u16 previous_timer, sequence;
     u32 ticks, report_at, retry_at, started_at, last_valid;
-    u32 total, window, errors, next_at, random, button_since[3], conflict_since, log_drops;
+    u32 total, window, errors, next_at, random, button_since[4], conflict_since, log_drops;
     u32 estop_since;
     u32 led_at;
     Demo_LedMode led_mode;
@@ -405,11 +409,12 @@ void Demo_ButtonProcess(void)
     }
     if((pb & (GPIO_PIN_3 | GPIO_PIN_4)) != (GPIO_PIN_3 | GPIO_PIN_4)) raw |= WIRELESS_CMD_UP;
     if((pa & (GPIO_PIN_9 | GPIO_PIN_10)) != (GPIO_PIN_9 | GPIO_PIN_10)) raw |= WIRELESS_CMD_DOWN;
-    if((pb & (GPIO_PIN_5 | GPIO_PIN_6)) != (GPIO_PIN_5 | GPIO_PIN_6)) raw |= WIRELESS_CMD_FAST;
+    if((pb & (GPIO_PIN_3 | GPIO_PIN_4)) == 0U) raw |= DEMO_KEY_UP_FAST;
+    if((pa & (GPIO_PIN_9 | GPIO_PIN_10)) == 0U) raw |= DEMO_KEY_DOWN_FAST;
 
-    /* Independent debounce of each complete key: stage 1 <-> stage 2 keeps
-     * it held; both contacts high for 10 ms is the final release. */
-    for(i = 0U; i < 3U; ++i) {
+    /* Debounce each direction and its own speed independently. Stage changes
+     * keep the direction held; FAST requires both contacts of that same key. */
+    for(i = 0U; i < 4U; ++i) {
         u8 bit = (u8)(1U << i);
         if((raw ^ g_demo.button_raw) & bit) g_demo.button_since[i] = now;
         if(((raw ^ g_demo.button_bits) & bit) &&
@@ -449,7 +454,9 @@ void Demo_ButtonProcess(void)
     command = (u8)(g_demo.button_bits & (WIRELESS_CMD_UP | WIRELESS_CMD_DOWN));
     if(g_demo.button_conflict || command == (WIRELESS_CMD_UP | WIRELESS_CMD_DOWN))
         command = WIRELESS_CMD_CONFLICT;
-    else if(g_demo.button_bits & WIRELESS_CMD_FAST) command |= WIRELESS_CMD_FAST;
+    else if((command == WIRELESS_CMD_UP && (g_demo.button_bits & DEMO_KEY_UP_FAST)) ||
+            (command == WIRELESS_CMD_DOWN && (g_demo.button_bits & DEMO_KEY_DOWN_FAST)))
+        command |= WIRELESS_CMD_FAST;
     if(g_demo.restart_wait) {
         if(raw || g_demo.button_bits) {
             g_demo.restart_idle_tracking = 0U;
@@ -669,7 +676,7 @@ BOOL Demo_ClockResume(void)
 static BOOL Demo_AnyKeyPressed(void)
 {
     const u16 pa_keys = GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10;
-    const u16 pb_keys = GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6;
+    const u16 pb_keys = GPIO_PIN_3 | GPIO_PIN_4;
     return (BOOL)((gpio_input_port_get(GPIOA) & pa_keys) != pa_keys ||
                   (gpio_input_port_get(GPIOB) & pb_keys) != pb_keys);
 }
@@ -887,7 +894,7 @@ void WirelessDemo_Init(void)
     gpio_output_options_set(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, GPIO_PIN_9);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_9);
     gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10);
-    gpio_mode_set(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6);
+    gpio_mode_set(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_3 | GPIO_PIN_4);
     g_demo.estop_raw = (u8)(gpio_input_bit_get(GPIOA, GPIO_PIN_8) == RESET);
 
     /* ===== 低功耗相关代码-引脚初始化-新增开始 ===== */
@@ -899,25 +906,18 @@ void WirelessDemo_Init(void)
     /* 下降键：PA9、PA10对应EXTI9、EXTI10 */
     syscfg_exti_line_config(EXTI_SOURCE_GPIOA, EXTI_SOURCE_PIN9);
     syscfg_exti_line_config(EXTI_SOURCE_GPIOA, EXTI_SOURCE_PIN10);
-    /* 快速键：PB5、PB6对应EXTI5、EXTI6 */
-    syscfg_exti_line_config(EXTI_SOURCE_GPIOB, EXTI_SOURCE_PIN5);
-    syscfg_exti_line_config(EXTI_SOURCE_GPIOB, EXTI_SOURCE_PIN6);
     /* 急停键：PA8对应EXTI8 */
     syscfg_exti_line_config(EXTI_SOURCE_GPIOA, EXTI_SOURCE_PIN8);
 
     /* 配置全部按键：下降沿触发中断 */
     exti_init(EXTI_3,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
     exti_init(EXTI_4,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
-    exti_init(EXTI_5,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
-    exti_init(EXTI_6,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
     exti_init(EXTI_8,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
     exti_init(EXTI_9,  EXTI_INTERRUPT, EXTI_TRIG_FALLING);
     exti_init(EXTI_10, EXTI_INTERRUPT, EXTI_TRIG_FALLING);
     /* 清除可能存在的中断挂起标志 */
     exti_interrupt_flag_clear(EXTI_3);
     exti_interrupt_flag_clear(EXTI_4);
-    exti_interrupt_flag_clear(EXTI_5);
-    exti_interrupt_flag_clear(EXTI_6);
     exti_interrupt_flag_clear(EXTI_8);
     exti_interrupt_flag_clear(EXTI_9);
     exti_interrupt_flag_clear(EXTI_10);
@@ -1023,8 +1023,6 @@ void EXTI2_3_IRQHandler(void)
 void EXTI4_15_IRQHandler(void)
 {
     Demo_KeyInterrupt(EXTI_4);
-    Demo_KeyInterrupt(EXTI_5);
-    Demo_KeyInterrupt(EXTI_6);
     Demo_KeyInterrupt(EXTI_8);
     Demo_KeyInterrupt(EXTI_9);
     Demo_KeyInterrupt(EXTI_10);

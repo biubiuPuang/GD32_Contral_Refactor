@@ -92,7 +92,7 @@ void gpio_mode_set(uint32_t port,uint32_t mode,uint32_t pull,uint32_t p)
     }
     assert(mode==GPIO_MODE_INPUT && pull==GPIO_PUPD_PULLUP);
     if(port==GPIOA) assert((gpio_clock&1) && p==(GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10));
-    else assert(port==GPIOB && (gpio_clock&2) && p==(GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6));
+    else assert(port==GPIOB && (gpio_clock&2) && p==(GPIO_PIN_3|GPIO_PIN_4));
 }
 void gpio_output_options_set(uint32_t port,uint8_t type,uint32_t speed,uint32_t p)
 {
@@ -337,7 +337,7 @@ static void check_button(void)
     pins|=GPIO_PIN_9;advance(1);pins&=~GPIO_PIN_9;advance(1);advance(99);
     assert(!g_demo.button_command && fifo_writes==before);
     advance(1);expect_command(WIRELESS_CMD_DOWN);assert(g_demo.busy);finish_tx();
-    keys(GPIO_PIN_9|GPIO_PIN_10);expect_command(WIRELESS_CMD_DOWN);
+    keys(GPIO_PIN_9|GPIO_PIN_10);expect_command(WIRELESS_CMD_DOWN_FAST);
     keys(GPIO_PIN_9);expect_command(WIRELESS_CMD_DOWN);
     /* An isolated second-stage low is also treated as the same held key. */
     keys(GPIO_PIN_10);expect_command(WIRELESS_CMD_DOWN);
@@ -347,26 +347,26 @@ static void check_button(void)
     before=fifo_writes;drain_stops();assert(fifo_writes==before+2U);
     before=fifo_writes;advance(1000);assert(fifo_writes==before);
 
-    /* UP: both stages are UP, not automatic FAST. */
+    /* UP: light press is normal, deep press is FAST, partial release is normal. */
     keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);
-    keys(GPIO_PIN_3|GPIO_PIN_4);expect_command(WIRELESS_CMD_UP);
+    keys(GPIO_PIN_3|GPIO_PIN_4);expect_command(WIRELESS_CMD_UP_FAST);
+    keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);
     keys(GPIO_PIN_4);expect_command(WIRELESS_CMD_UP);
     keys(0);expect_command(WIRELESS_CMD_STOP);drain_stops();
 
-    /* FAST alone reports status on either stage; adding/removing it alters the full
-     * direction+speed command and preempts an old in-flight packet. */
+    /* The former FAST key has no effect, alone or alongside either direction. */
     before=fifo_writes;
-    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_FAST);
-    keys(GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_FAST);
-    keys(GPIO_PIN_6);expect_command(WIRELESS_CMD_FAST);assert(fifo_writes>before);
-    keys(GPIO_PIN_3|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP_FAST);
-    keys(GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP_FAST);
-    keys(GPIO_PIN_3|GPIO_PIN_5);expect_command(WIRELESS_CMD_UP_FAST);
-    keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_UP);
-    keys(GPIO_PIN_9);expect_command(WIRELESS_CMD_DOWN);
-    keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
-    /* Direction release stops even while FAST remains held. */
-    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_FAST);
+    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_STOP);
+    keys(GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_STOP);
+    keys(GPIO_PIN_6);expect_command(WIRELESS_CMD_STOP);assert(fifo_writes==before);
+    keys(GPIO_PIN_3|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP);
+    keys(GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_6);expect_command(WIRELESS_CMD_UP);
+    keys(GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5);expect_command(WIRELESS_CMD_UP_FAST);
+    assert(g_demo.busy && packet[5]==WIRELESS_CMD_UP_FAST);
+    keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN);
+    keys(GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
+    /* Releasing the direction stops even while the former FAST key stays held. */
+    keys(GPIO_PIN_5);expect_command(WIRELESS_CMD_STOP);drain_stops();
 
     /* Opposite direction raw assertion aborts an already sending UP packet,
      * without first waiting for the new key's debounce or TX_DONE. */
@@ -378,19 +378,19 @@ static void check_button(void)
     advance(1);expect_command(WIRELESS_CMD_UP);
     keys(GPIO_PIN_3|GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_CONFLICT);
     finish_tx();advance(600U);assert(g_demo.busy && packet[5]==WIRELESS_CMD_CONFLICT);
-    keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
+    keys(GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
     keys(0);expect_command(WIRELESS_CMD_STOP);drain_stops();
 
-    /* UP and FAST also debounce BOTH edges independently. */
+    /* UP and its second-stage speed debounce BOTH edges independently. */
     for(unsigned k=0;k<2U;++k) {
-        u32 bit=k?GPIO_PIN_5:GPIO_PIN_3;
+        u32 bit=k?GPIO_PIN_4:GPIO_PIN_3;
         keys(k?GPIO_PIN_3:0U);drain_stops();
         pins&=~bit;advance(1);advance(99);
-        assert(!(g_demo.button_bits&(k?WIRELESS_CMD_FAST:WIRELESS_CMD_UP)));
-        advance(1);assert(g_demo.button_bits&(k?WIRELESS_CMD_FAST:WIRELESS_CMD_UP));
+        assert(!(g_demo.button_bits&(k?DEMO_KEY_UP_FAST:WIRELESS_CMD_UP)));
+        advance(1);assert(g_demo.button_bits&(k?DEMO_KEY_UP_FAST:WIRELESS_CMD_UP));
         pins|=bit;advance(1);advance(99);
-        assert(g_demo.button_bits&(k?WIRELESS_CMD_FAST:WIRELESS_CMD_UP));
-        advance(1);assert(!(g_demo.button_bits&(k?WIRELESS_CMD_FAST:WIRELESS_CMD_UP)));
+        assert(g_demo.button_bits&(k?DEMO_KEY_UP_FAST:WIRELESS_CMD_UP));
+        advance(1);assert(!(g_demo.button_bits&(k?DEMO_KEY_UP_FAST:WIRELESS_CMD_UP)));
         keys(0);drain_stops();
     }
 
@@ -402,7 +402,8 @@ static void check_button(void)
         for(unsigned j=0;j<6U;++j)if(state&(1U<<j))pressed|=contact[j];
         if((state&3U) && !(state&12U))expected=WIRELESS_CMD_UP;
         if((state&12U) && !(state&3U))expected=WIRELESS_CMD_DOWN;
-        if(state&48U)expected|=WIRELESS_CMD_FAST;
+        if((state&3U)==3U && !(state&12U))expected=WIRELESS_CMD_UP_FAST;
+        if((state&12U)==12U && !(state&3U))expected=WIRELESS_CMD_DOWN_FAST;
         if((state&3U) && (state&12U))expected=WIRELESS_CMD_CONFLICT;
         keys(pressed);expect_command(expected);
         if(expected) assert(g_demo.busy && packet[5]==expected);
@@ -411,7 +412,7 @@ static void check_button(void)
 
     /* Held command keeps transmitting with 40..60ms start intervals, while
      * protocol tag, command and 4-byte TX FIFO convention stay correct. */
-    reset(1);configure(1,0);drain_stops();keys(GPIO_PIN_9|GPIO_PIN_5);
+    reset(1);configure(1,0);drain_stops();keys(GPIO_PIN_9|GPIO_PIN_10);
     for(unsigned i=0;i<10U;++i) {
         u32 start=g_demo.started_at,wait=g_demo.next_at-start;
         assert(wait>=400U && wait<=600U);expect_command(WIRELESS_CMD_DOWN_FAST);
@@ -434,6 +435,40 @@ static void check_button(void)
     keys(0);drain_stops();keys(GPIO_PIN_3);assert(g_demo.busy);
     stby_fail=1;keys(GPIO_PIN_9);assert(!g_demo.ready && !strcmp(g_demo.error,"BUTTON_STBY"));
     stby_fail=0;advance(10000U);assert(g_demo.ready);
+}
+
+static void check_two_stage_speed(void)
+{
+    const u32 first[]={GPIO_PIN_3,GPIO_PIN_9};
+    const u32 second[]={GPIO_PIN_4,GPIO_PIN_10};
+    const u8 normal[]={WIRELESS_CMD_UP,WIRELESS_CMD_DOWN};
+    const u8 fast[]={WIRELESS_CMD_UP_FAST,WIRELESS_CMD_DOWN_FAST};
+    for(unsigned k=0;k<2U;++k) {
+        reset(1);configure(1U,0U);drain_stops();
+        keys(first[k]);expect_command(normal[k]);
+        /* A bouncing second contact cannot reset the already held direction. */
+        pins&=~second[k];advance(1U);advance(99U);expect_command(normal[k]);
+        pins|=second[k];advance(1U);
+        pins&=~second[k];advance(1U);advance(99U);expect_command(normal[k]);
+        advance(1U);expect_command(fast[k]);assert(!g_demo.stops_left);
+        assert(g_demo.busy && packet[5]==fast[k]);
+        pins|=second[k];advance(1U);advance(99U);expect_command(fast[k]);
+        pins&=~second[k];advance(1U);
+        pins|=second[k];advance(1U);advance(99U);expect_command(fast[k]);
+        advance(1U);expect_command(normal[k]);assert(!g_demo.stops_left);
+        assert(g_demo.busy && packet[5]==normal[k]);
+        /* Changing from a deep press to the other light press cannot carry FAST. */
+        keys(first[k]|second[k]);expect_command(fast[k]);
+        keys(first[1U-k]);expect_command(normal[1U-k]);
+        keys(0U);expect_command(WIRELESS_CMD_STOP);drain_stops();
+        /* Direct deep press and speed changes across uint32 time wrap. */
+        g_demo.ticks=UINT32_MAX-50U;g_demo.previous_timer=counter;
+        g_idle_since=g_demo.ticks;
+        keys(first[k]|second[k]);expect_command(fast[k]);
+        keys(first[k]);expect_command(normal[k]);
+        keys(0U);drain_stops();
+    }
+    puts("PASS two-stage speed: both directions, bounce on both speed edges, normal/FAST/normal without STOP, packet preemption, direction change without stale FAST, direct deep press and time wrap");
 }
 
 /* Complete local TX operations while advancing the real application clock;
@@ -460,9 +495,9 @@ static void check_snapshot_logs(void)
     log_ticks(1U);assert(strcmp(output,"no key press model\r\n")==0);
     expect_snapshot(GPIO_PIN_3,"up\r\n");
     expect_snapshot(GPIO_PIN_9,"dowm\r\n");
-    expect_snapshot(GPIO_PIN_3|GPIO_PIN_5,"fast up\r\n");
-    expect_snapshot(GPIO_PIN_9|GPIO_PIN_5,"fast dowm\r\n");
-    expect_snapshot(GPIO_PIN_5,"wu-xian fast\r\n");
+    expect_snapshot(GPIO_PIN_3|GPIO_PIN_4,"fast up\r\n");
+    expect_snapshot(GPIO_PIN_9|GPIO_PIN_10,"fast dowm\r\n");
+    expect_snapshot(GPIO_PIN_5|GPIO_PIN_6,"no key press model\r\n");
     expect_snapshot(GPIO_PIN_3|GPIO_PIN_9,"error model\r\n");
     expect_snapshot(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_9,"stop model\r\n");
     expect_snapshot(0U,"no key press model\r\n");
@@ -510,7 +545,7 @@ static void check_estop(void)
     }
     /* Debounce both PA8 edges; assertion preempts an in-flight motion packet,
      * and release restores the currently held direction without a re-press. */
-    keys(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_5);
+    keys(GPIO_PIN_8|GPIO_PIN_3|GPIO_PIN_4);
     pins|=GPIO_PIN_8;advance(1);advance(99);expect_command(WIRELESS_CMD_ESTOP);
     pins&=~GPIO_PIN_8;advance(1);pins|=GPIO_PIN_8;advance(1);advance(100);
     expect_command(WIRELESS_CMD_UP_FAST);assert(g_demo.busy);
@@ -543,8 +578,8 @@ static void check_restart_release(void)
     const u32 causes[]={RCU_FLAG_FWDGTRST,RCU_FLAG_WWDGTRST,RCU_FLAG_SWRST,
                         RCU_FLAG_PORRST|RCU_FLAG_FWDGTRST};
     const u32 held_keys[]={GPIO_PIN_3,GPIO_PIN_4,GPIO_PIN_9,GPIO_PIN_10,
-                          GPIO_PIN_3|GPIO_PIN_5,GPIO_PIN_9|GPIO_PIN_6,
-                          GPIO_PIN_3|GPIO_PIN_9,GPIO_PIN_5,GPIO_PIN_6};
+                          GPIO_PIN_3|GPIO_PIN_4,GPIO_PIN_9|GPIO_PIN_10,
+                          GPIO_PIN_3|GPIO_PIN_9};
     for(unsigned c=0;c<sizeof(causes)/sizeof(causes[0]);++c) {
         for(unsigned k=0;k<sizeof(held_keys)/sizeof(held_keys[0]);++k) {
             reset(1);configure(1U,0U);pins=all_keys&~held_keys[k];
@@ -572,7 +607,7 @@ static void check_restart_release(void)
     WirelessDemo_Init();advance(1U);advance(100U);expect_command(WIRELESS_CMD_ESTOP);
     keys(GPIO_PIN_3);expect_command(WIRELESS_CMD_STOP);assert(g_demo.restart_wait);
     keys(0U);advance(100U);assert(!g_demo.restart_wait);
-    keys(GPIO_PIN_9|GPIO_PIN_5);expect_command(WIRELESS_CMD_DOWN_FAST);
+    keys(GPIO_PIN_9|GPIO_PIN_10);expect_command(WIRELESS_CMD_DOWN_FAST);
     /* UART configuration and radio retry cannot bypass release. */
     reset_flags=RCU_FLAG_SWRST;pins=all_keys&~GPIO_PIN_3;WirelessDemo_Init();
     configure(1U,0U);advance(100U);expect_command(WIRELESS_CMD_STOP);
@@ -615,9 +650,9 @@ int main(void)
 {
     check_fifty_channels();check_configuration();check_power_loss();check_uart_and_faults();
 #if WIRELESS_DEMO_TX
-    check_button();check_estop();check_restart_release();check_snapshot_logs();
+    check_button();check_two_stage_speed();check_estop();check_restart_release();check_snapshot_logs();
 #else
     check_receive();
 #endif
-    puts(WIRELESS_DEMO_TX?"211 three-key + PA8 E-stop debounce/priority/repeat/release/reboot + protocol A2 behavior tests PASS":"221 multi-device behavior tests PASS");return 0;
+    puts(WIRELESS_DEMO_TX?"211 two-stage direction speed + PA8 E-stop debounce/priority/repeat/release/reboot + protocol A2 behavior tests PASS":"221 multi-device behavior tests PASS");return 0;
 }

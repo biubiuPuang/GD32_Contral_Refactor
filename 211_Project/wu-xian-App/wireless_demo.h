@@ -7,12 +7,12 @@
  * below in a tight loop, or use the compatible WirelessDemo_Process wrapper.
  * Init configures the existing SysTick delay BSP, USART1 and TIMER2;
  * the TX board configures active-low PA9/PA10 (DOWN), PB3/PB4 (UP),
- * PB5/PB6 (FAST), PA8 (active-low wireless E-stop) inputs with pull-ups.
+ * PA8 (active-low wireless E-stop) inputs with pull-ups. PB5/PB6 are unused.
  * PB9 drives an active-low LED: idle ON, sending toggles every 500ms,
  * E-stop/unconfigured/radio fault/key conflict toggles every 200ms; sleep OFF.
- * Either direction/speed key stage means that key is held.
+ * Either contact holds its direction; both contacts add FAST to that direction.
  * Application owns USART1_IRQHandler for buffered RX and nonblocking log TX,
- * plus RTC/EXTI17 and key EXTI3/4/5/6/8/9/10 for LP180 deep sleep.
+ * plus RTC/EXTI17 and key EXTI3/4/8/9/10 for LP180 deep sleep.
  * TIMER2 is reserved; no timer/SysTick IRQ handler is required.
  * Persistent settings use 0x0800F800..0x0800FFFF (last two 1KB pages).
  * First boot/default: unpaired. Provision BOTH boards with SET,<ID>,<CH>.
@@ -56,7 +56,7 @@ void Demo_ReportIfDue(void);
  */
 void Demo_LedProcess(void);
 /* Call LowPowerProcess after reporting and before feeding the enabled FWDGT.
- * It stays in deep sleep until any of the seven key inputs wakes it.
+ * It stays in deep sleep until any of the five key inputs wakes it.
  */
 void Demo_LowPowerProcess(void);
 void Demo_WatchdogFeed(void);

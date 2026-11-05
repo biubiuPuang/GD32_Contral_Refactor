@@ -1,9 +1,9 @@
 {
   "errors": 0,
   "warnings": 0,
-  "program_size": "Program Size: Code=21084 RO-data=932 RW-data=4 ZI-data=1908  \r",
-  "hex_end_exclusive": "0x8005608",
-  "hex_sha256": "21fb609041001e3d5f0d29cbb28ffa1565b9d6dad94de69d55583fc87080582a",
+  "program_size": "Program Size: Code=21000 RO-data=932 RW-data=4 ZI-data=1908  \r",
+  "hex_end_exclusive": "0x80055b8",
+  "hex_sha256": "bbac391e7721a91b63564f46e08b91bd68e3664749479ebffff86805f0459d2f",
   "version": "V5 F50 LP180",
   "idle_seconds": 180,
   "led": {
@@ -24,12 +24,30 @@
   "wake_inputs": [
     "PB3",
     "PB4",
-    "PB5",
-    "PB6",
     "PA8",
     "PA9",
     "PA10"
   ],
+  "speed_control": {
+    "up_normal": [
+      "PB3"
+    ],
+    "up_fast": [
+      "PB3",
+      "PB4"
+    ],
+    "down_normal": [
+      "PA9"
+    ],
+    "down_fast": [
+      "PA9",
+      "PA10"
+    ],
+    "unused_inputs": [
+      "PB5",
+      "PB6"
+    ]
+  },
   "rtc_interval_seconds_nominal": 1,
   "simulated_sleep_seconds": 3600,
   "hardware_accessed": false,
@@ -41,6 +59,8 @@
     "RUN: Flash regression",
     "RUN: UART regression",
     "RUN: key regression",
+    "RUN: two-stage speed regression",
+    "PASS two-stage speed: both directions, bounce on both speed edges, normal/FAST/normal without STOP, packet preemption, direction change without stale FAST, direct deep press and time wrap",
     "RUN: E-stop regression",
     "RUN: restart release regression",
     "PASS sender restart: cold held-key startup, watchdog/software release gate, both contacts, direction/FAST/conflict, debounce, ESTOP priority, config, wrap.",
@@ -48,9 +68,9 @@
     "PASS LED: active-low PB9, clock/preload/output setup, idle/STOP tail, immediate send, 500ms/200ms boundaries, E-stop/conflict/fault/unconfigured priority and recovery",
     "PASS LED: hardware/software timer wrap, cancelled sleep keeps indication, wake radio fault restores alert; all sleep/RTC entries keep LED OFF",
     "PASS: every key mapping/IRQ and RTC EXTI17 configuration",
-    "PASS: 180s threshold, all seven held/released inputs, wrap and latched short pulse",
+    "PASS: 180s threshold, all five held/released inputs, ignored PB5/PB6, wrap and latched short pulse",
     "PASS: no sleep with held key, active TX/STOP, RTC/radio fault, UART command or masked IRQ",
-    "PASS: all seven inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command",
+    "PASS: all five inputs wake, only one entry/exit log, restored clocks/UART/radio and correct command",
     "PASS: released short press, pending edge at WFI boundary, key during entry-log drain",
     "PASS: UART TC/stop-bit wait and timeout, repeated sleep sessions, pairing/GET after wake",
     "PASS: unpaired startup and DEFAULT also sleep without transmitting control",
@@ -58,8 +78,8 @@
     "LOW POWER sender tests PASS; no hardware accessed."
   ],
   "sources": {
-    "211_Project\\wu-xian-App\\wireless_demo.c": "782031ae71f75583302dac3c67b5546829d1723ec6163aa713f5350a9d28084d",
-    "211_Project\\wu-xian-App\\wireless_demo.h": "811f50c891834596601aeaed3a33b4cd960a3a25c411bc8ced0b448fc207256d",
+    "211_Project\\wu-xian-App\\wireless_demo.c": "814ef467378cc78aac8bd2c6ee9d130bab99ed190e91cca83de87502cbaad11b",
+    "211_Project\\wu-xian-App\\wireless_demo.h": "854e40b4fce4e31a04b0a5c48b23532468df9eafee1f5153eab92bfd3fbf1649",
     "211_Project\\User\\main.c": "554246a6b69010f4a46d54b3e2ec0315f7f96d4bfa531ca297725ead11ccfebb"
   }
 }
