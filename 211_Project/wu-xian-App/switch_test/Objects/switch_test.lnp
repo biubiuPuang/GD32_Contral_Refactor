@@ -1,0 +1,15 @@
+--cpu=Cortex-M23
+".\objects\gd32e23x_it.o"
+".\objects\switch_test.o"
+".\objects\systick.o"
+".\objects\usart.o"
+".\objects\gd32e23x_gpio.o"
+".\objects\gd32e23x_misc.o"
+".\objects\gd32e23x_rcu.o"
+".\objects\gd32e23x_usart.o"
+".\objects\system_gd32e23x.o"
+".\objects\startup_gd32e23x.o"
+--library_type=microlib --strict --scatter ".\Objects\switch_test.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\switch_test.map" -o .\Objects\switch_test.axf
